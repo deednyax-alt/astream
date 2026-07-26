@@ -1,0 +1,10 @@
+[
+  {
+    "id": "admin_owner",
+    "username": "admin",
+    "email": "admin@astream.app",
+    "password": "astream2026",
+    "role": "admin",
+    "createdAt": "2026-07-26T22:20:57.660Z"
+  }
+]

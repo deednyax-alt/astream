@@ -145,12 +145,97 @@ app.get('/api/maintenance/status', (req, res) => {
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'astream2026';
 
-// API : Basculement du mode maintenance (Protégé par Mot de Passe Admin)
+// ─── Base de Données des Comptes Utilisateurs (Authentification & Rôles) ───
+const USERS_FILE = path.join(__dirname, 'users.json');
+let usersStore = [];
+
+function loadUsers() {
+  if (fs.existsSync(USERS_FILE)) {
+    try {
+      usersStore = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+    } catch (e) {
+      usersStore = [];
+    }
+  }
+  // Créer le compte Administrateur Propriétaire par défaut s'il n'existe pas
+  if (!usersStore.some(u => u.role === 'admin')) {
+    usersStore.push({
+      id: 'admin_owner',
+      username: 'admin',
+      email: 'admin@astream.app',
+      password: ADMIN_PASSWORD,
+      role: 'admin',
+      createdAt: new Date().toISOString()
+    });
+    saveUsers();
+  }
+}
+
+function saveUsers() {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(usersStore, null, 2));
+  } catch (e) {}
+}
+
+loadUsers();
+
+// API : Connexion Compte (Login)
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password) {
+    return res.status(400).json({ success: false, error: 'Identifiant et mot de passe requis.' });
+  }
+
+  const user = usersStore.find(u => u.username.toLowerCase() === username.toLowerCase() || u.email.toLowerCase() === username.toLowerCase());
+  if (!user || user.password !== password) {
+    return res.status(401).json({ success: false, error: 'Identifiant ou mot de passe incorrect.' });
+  }
+
+  const token = `astream_token_${user.id}_${Date.now()}`;
+  res.json({
+    success: true,
+    token,
+    user: { id: user.id, username: user.username, email: user.email, role: user.role }
+  });
+});
+
+// API : Inscription Compte (Register - Rôle Membre Utilisateur Standard)
+app.post('/api/auth/register', (req, res) => {
+  const { username, email, password } = req.body || {};
+  if (!username || !password || !email) {
+    return res.status(400).json({ success: false, error: 'Tous les champs sont requis.' });
+  }
+
+  if (usersStore.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+    return res.status(400).json({ success: false, error: 'Ce nom d\'utilisateur est déjà utilisé.' });
+  }
+
+  const newUser = {
+    id: `user_${Date.now()}`,
+    username: username.trim(),
+    email: email.trim(),
+    password,
+    role: 'user', // Les nouveaux membres ont le rôle Utilisateur Standard (Pas d'accès Admin!)
+    createdAt: new Date().toISOString()
+  };
+
+  usersStore.push(newUser);
+  saveUsers();
+
+  const token = `astream_token_${newUser.id}_${Date.now()}`;
+  res.json({
+    success: true,
+    token,
+    user: { id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role }
+  });
+});
+
+// API : Basculement du mode maintenance (Protégé par Mot de Passe ou Compte Admin)
 app.post('/api/maintenance/toggle', (req, res) => {
   const { password, enabled, message } = req.body || {};
 
-  if (password !== ADMIN_PASSWORD) {
-    return res.status(401).json({ success: false, error: 'Mot de passe administrateur incorrect.' });
+  if (password !== ADMIN_PASSWORD && !usersStore.some(u => u.role === 'admin' && u.password === password)) {
+    return res.status(401).json({ success: false, error: 'Accès refusé. Seul l\'Administrateur peut modifier la maintenance.' });
   }
 
   if (typeof enabled === 'boolean') {

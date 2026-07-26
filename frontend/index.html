@@ -37,9 +37,9 @@
       <button class="nav-btn" data-tab="catalog" data-cat="movie"><i class="fa-solid fa-film"></i> Films</button>
       <button class="nav-btn" data-tab="catalog" data-cat="manga"><i class="fa-solid fa-book-open"></i> Mangas</button>
       <button class="nav-btn" data-tab="catalog" data-cat="live"><i class="fa-solid fa-signal"></i> TV & Sports</button>
-      <button class="nav-btn" data-tab="catalog" data-cat="schedule"><i class="fa-solid fa-calendar-days"></i> Planning</button>
       <button class="nav-btn" id="open-suggestion-btn"><i class="fa-solid fa-lightbulb"></i> Suggérer</button>
-      <button class="nav-btn" data-tab="scraper-console"><i class="fa-solid fa-user-shield"></i> Admin Panel</button>
+      <button class="nav-btn" id="open-auth-modal-btn"><i class="fa-solid fa-user-circle"></i> Connexion</button>
+      <button class="nav-btn" data-tab="scraper-console" id="admin-nav-btn" style="display:none;background:rgba(139, 92, 246, 0.2);border-color:var(--accent-purple);color:#fff"><i class="fa-solid fa-user-shield"></i> Admin Panel</button>
     </nav>
   </header>
 
@@ -417,6 +417,51 @@
       <input type="text" id="sug-pseudo" placeholder="Votre pseudo (optionnel)" style="width:100%;padding:10px;margin-bottom:15px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);color:#fff">
       <button id="send-sug-btn" class="btn btn-primary" style="width:100%"><i class="fa-solid fa-paper-plane"></i> Envoyer la suggestion</button>
       <div id="sug-status" style="margin-top:10px;font-size:0.85rem"></div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL CONNEXION & INSCRIPTION (AUTH MODAL) ════════ -->
+  <div id="auth-modal" class="modal">
+    <div class="modal-content glass" style="max-width:440px">
+      <span class="close-btn" id="close-auth-btn">&times;</span>
+      <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:10px">
+        <button id="auth-tab-login" class="sub-tab active" style="flex:1"><i class="fa-solid fa-right-to-bracket"></i> Connexion</button>
+        <button id="auth-tab-register" class="sub-tab" style="flex:1"><i class="fa-solid fa-user-plus"></i> Inscription</button>
+      </div>
+
+      <!-- Formulaire Connexion -->
+      <form id="auth-login-form">
+        <h3 style="margin-bottom:15px;color:#fff;font-size:1.1rem">Connexion à votre Compte</h3>
+        <div class="admin-form-group">
+          <label>Nom d'utilisateur ou Email :</label>
+          <input type="text" id="login-username" class="admin-input" placeholder="ex: admin ou nom@exemple.com" required>
+        </div>
+        <div class="admin-form-group" style="margin-bottom:20px">
+          <label>Mot de passe :</label>
+          <input type="password" id="login-password" class="admin-input" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%"><i class="fa-solid fa-right-to-bracket"></i> Se Connecter</button>
+        <div id="login-status" style="margin-top:12px;font-size:0.85rem"></div>
+      </form>
+
+      <!-- Formulaire Inscription -->
+      <form id="auth-register-form" style="display:none">
+        <h3 style="margin-bottom:15px;color:#fff;font-size:1.1rem">Créer un Compte Membre</h3>
+        <div class="admin-form-group">
+          <label>Nom d'utilisateur :</label>
+          <input type="text" id="reg-username" class="admin-input" placeholder="ex: Pseudo" required>
+        </div>
+        <div class="admin-form-group">
+          <label>Adresse Email :</label>
+          <input type="email" id="reg-email" class="admin-input" placeholder="nom@exemple.com" required>
+        </div>
+        <div class="admin-form-group" style="margin-bottom:20px">
+          <label>Mot de passe :</label>
+          <input type="password" id="reg-password" class="admin-input" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%"><i class="fa-solid fa-user-plus"></i> Créer mon Compte</button>
+        <div id="reg-status" style="margin-top:12px;font-size:0.85rem"></div>
+      </form>
     </div>
   </div>
 

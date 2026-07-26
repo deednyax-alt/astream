@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupPlayerEvents();
   setupMangaReaderEvents();
   setupSuggestionEvents();
+  setupAuthEvents();
   setupConsole();
   setupServerMonitor();
 
@@ -1558,6 +1559,151 @@ function closeModal(modal) {
     modal.classList.remove('show');
     modal.classList.remove('active');
   }
+}
+
+// ─── Gestion du Système de Comptes & Authentification ──────────
+function setupAuthEvents() {
+  const authModal         = $('auth-modal');
+  const openAuthBtn       = $('open-auth-modal-btn');
+  const closeAuthBtn      = $('close-auth-btn');
+  const tabLogin          = $('auth-tab-login');
+  const tabRegister       = $('auth-tab-register');
+  const loginForm         = $('auth-login-form');
+  const regForm           = $('auth-register-form');
+  const loginStatus       = $('login-status');
+  const regStatus         = $('reg-status');
+  const adminNavBtn       = $('admin-nav-btn');
+
+  // Mettre à jour l'affichage de l'utilisateur (Masquer/Afficher le bouton Admin)
+  window.updateUserUI = () => {
+    const userStr = localStorage.getItem('astream_user');
+    if (!userStr) {
+      if (openAuthBtn) openAuthBtn.innerHTML = `<i class="fa-solid fa-user-circle"></i> Connexion`;
+      if (adminNavBtn) adminNavBtn.style.display = 'none';
+      return;
+    }
+
+    try {
+      const user = JSON.parse(userStr);
+      if (openAuthBtn) openAuthBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> ${user.username}`;
+
+      // SEUL L'ADMINISTRATEUR (role: 'admin') VOIT ET ACCÈDE AU BOUTON ADMIN PANEL !
+      if (user.role === 'admin') {
+        if (adminNavBtn) adminNavBtn.style.display = 'inline-flex';
+      } else {
+        if (adminNavBtn) adminNavBtn.style.display = 'none';
+      }
+    } catch (e) {
+      if (adminNavBtn) adminNavBtn.style.display = 'none';
+    }
+  };
+
+  if (openAuthBtn) {
+    openAuthBtn.addEventListener('click', () => {
+      const userStr = localStorage.getItem('astream_user');
+      if (userStr) {
+        if (confirm('Voulez-vous vous déconnecter de votre compte astream ?')) {
+          localStorage.removeItem('astream_user');
+          localStorage.removeItem('astream_token');
+          localStorage.removeItem('astream_admin_pass');
+          updateUserUI();
+          showTab('catalog', 'all');
+        }
+      } else {
+        openModal(authModal);
+      }
+    });
+  }
+
+  if (closeAuthBtn) closeAuthBtn.addEventListener('click', () => closeModal(authModal));
+
+  if (tabLogin && tabRegister) {
+    tabLogin.addEventListener('click', () => {
+      tabLogin.classList.add('active');
+      tabRegister.classList.remove('active');
+      loginForm.style.display = 'block';
+      regForm.style.display = 'none';
+    });
+
+    tabRegister.addEventListener('click', () => {
+      tabRegister.classList.add('active');
+      tabLogin.classList.remove('active');
+      loginForm.style.display = 'none';
+      regForm.style.display = 'block';
+    });
+  }
+
+  // Soumission Connexion (Login)
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = $('login-username').value.trim();
+      const password = $('login-password').value.trim();
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          localStorage.setItem('astream_user', JSON.stringify(data.user));
+          localStorage.setItem('astream_token', data.token);
+          if (data.user.role === 'admin') {
+            localStorage.setItem('astream_admin_pass', password);
+          }
+          loginStatus.style.color = '#10b981';
+          loginStatus.textContent = `✓ Bienvenue ${data.user.username} !`;
+          updateUserUI();
+          setTimeout(() => closeModal(authModal), 1200);
+        } else {
+          loginStatus.style.color = '#ef4444';
+          loginStatus.textContent = data.error || 'Erreur de connexion.';
+        }
+      } catch (err) {
+        loginStatus.style.color = '#ef4444';
+        loginStatus.textContent = `Erreur serveur : ${err.message}`;
+      }
+    });
+  }
+
+  // Soumission Inscription (Register)
+  if (regForm) {
+    regForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = $('reg-username').value.trim();
+      const email    = $('reg-email').value.trim();
+      const password = $('reg-password').value.trim();
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          localStorage.setItem('astream_user', JSON.stringify(data.user));
+          localStorage.setItem('astream_token', data.token);
+          regStatus.style.color = '#10b981';
+          regStatus.textContent = `✓ Compte créé avec succès ! Bienvenue ${data.user.username}.`;
+          updateUserUI();
+          setTimeout(() => closeModal(authModal), 1200);
+        } else {
+          regStatus.style.color = '#ef4444';
+          regStatus.textContent = data.error || 'Erreur d\'inscription.';
+        }
+      } catch (err) {
+        regStatus.style.color = '#ef4444';
+        regStatus.textContent = `Erreur serveur : ${err.message}`;
+      }
+    });
+  }
+
+  updateUserUI();
 }
 
 // ─── Panneau d'Administration Dashboard (Admin Panel) ─────────
