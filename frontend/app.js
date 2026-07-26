@@ -1370,7 +1370,7 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
   }
 }
 
-// ─── Menu des Sources Lecteurs ────────────────────────────────
+// ─── Menu des Sources Lecteurs (Lecteur Original Astream) ───────
 function buildSourceSelector(data) {
   streamSourceSelect.innerHTML = '';
   const sources = [];
@@ -1389,15 +1389,23 @@ function buildSourceSelector(data) {
     return u;
   };
 
-  // 1. Placer l'embed principal s'il est disponible
-  if (data.embedUrl) {
-    const cleanEmbed = cleanUrl(data.embedUrl);
-    if (cleanEmbed) {
-      sources.push({ name: '🎬 Lecteur Principal HD astream', url: cleanEmbed });
+  // 1. Placer le flux direct astream en PREMIER s'il est disponible (Lecteur Original)
+  if (data.streamUrl) {
+    const cleanStream = cleanUrl(data.streamUrl);
+    if (cleanStream) {
+      sources.push({ name: '🟢 Lecteur Direct astream (Recommandé)', url: cleanStream });
     }
   }
 
-  // 2. Ajouter les miroirs d'embeds (Sibnet, Vidmoly, Franime, VidSrc, etc.)
+  // 2. Placer l'embed principal s'il est disponible et différent du flux direct
+  if (data.embedUrl && data.embedUrl !== data.streamUrl) {
+    const cleanEmbed = cleanUrl(data.embedUrl);
+    if (cleanEmbed) {
+      sources.push({ name: '🎬 Lecteur Embed Principal', url: cleanEmbed });
+    }
+  }
+
+  // 3. Ajouter les miroirs d'embeds secondaires (Sibnet, Vidmoly, Franime, VidSrc, etc.)
   if (data.embeds) {
     Object.entries(data.embeds).forEach(([key, url]) => {
       const targetUrl = cleanUrl(url);
@@ -1415,14 +1423,6 @@ function buildSourceSelector(data) {
     });
   }
 
-  // 3. Ajouter le flux direct MP4/HLS s'il n'est pas un token media-proxy expiré
-  if (data.streamUrl && !data.streamUrl.includes('media-proxy')) {
-    const cleanStream = cleanUrl(data.streamUrl);
-    if (cleanStream && !sources.some(s => s.url === cleanStream)) {
-      sources.push({ name: '🟢 Lecteur Direct MP4 / HLS', url: cleanStream });
-    }
-  }
-
   // 4. Source alternative TMDB VidSrc pour Films et Séries
   if (numericTmdb) {
     const vidsrcUrl = currentAnime?.type === 'movie'
@@ -1433,8 +1433,8 @@ function buildSourceSelector(data) {
     }
   }
 
-  if (sources.length === 0 && data.streamUrl) {
-    sources.push({ name: '🟢 Lecteur Direct astream', url: data.streamUrl });
+  if (sources.length === 0 && data.embedUrl) {
+    sources.push({ name: '🟢 Lecteur Direct astream', url: data.embedUrl });
   }
 
   sources.forEach((src, idx) => {
