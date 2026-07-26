@@ -252,6 +252,34 @@ app.post('/api/maintenance/toggle', (req, res) => {
   res.json({ success: true, maintenance: isMaintenanceMode, message: maintenanceMessage });
 });
 
+// ─── Proxy Serveur Automatique vers l'API Officielle DeadCow v1 ──
+app.use('/api/dc-proxy', async (req, res) => {
+  try {
+    const targetEndpoint = req.path;
+    const queryParams = new URLSearchParams(req.query);
+    if (!queryParams.has('key')) queryParams.set('key', 'dc_live_c5d15446a0c5cf51b22b5be9');
+
+    const targetUrl = `https://deadcow-streaming.lol/api/v1${targetEndpoint}?${queryParams.toString()}`;
+    const response = await axios({
+      method: req.method,
+      url: targetUrl,
+      data: req.body,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 35000
+    });
+
+    res.status(response.status).json(response.data);
+  } catch (err) {
+    if (err.response) {
+      res.status(err.response.status).json(err.response.data);
+    } else {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  }
+});
+
 // Servir les fichiers statiques du frontend
 app.use(express.static(path.join(__dirname, 'frontend')));
 

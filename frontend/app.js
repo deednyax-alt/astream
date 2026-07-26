@@ -256,49 +256,45 @@ function setupSubTabs() {
   });
 }
 
-// ─── Appel API DeadCow v1 ─────────────────────────────────────
+// ─── Appel API DeadCow v1 (Direct & Proxy Serveur Automatique) ───
 async function dcFetch(endpoint, params = {}, options = {}) {
-  const { retries = 0, retryDelay = 2000, timeout = 45000 } = options;
-  const url = new URL(`${DC_API}${endpoint}`);
-  url.searchParams.set('key', API_KEY);
+  const { retries = 1, retryDelay = 1500, timeout = 35000 } = options;
+
+  let queryStr = `key=${API_KEY}`;
   Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null) url.searchParams.set(k, v);
+    if (v !== undefined && v !== null) queryStr += `&${encodeURIComponent(k)}=${encodeURIComponent(v)}`;
   });
+
+  const directUrl = `${DC_API}${endpoint}?${queryStr}`;
+  const proxyUrl  = `/api/dc-proxy${endpoint}?${queryStr}`;
 
   let lastError;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
+      const target = attempt === 0 ? directUrl : proxyUrl;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeout);
 
-      const res = await fetch(url.toString(), { signal: controller.signal });
+      const res = await fetch(target, { signal: controller.signal });
       clearTimeout(timer);
 
       if (!res.ok) {
         if (res.status === 429) {
-          console.warn(`[API] Limite de requêtes atteinte (429) sur ${endpoint}, attente de 2s...`);
-          await new Promise(r => setTimeout(r, 2000));
-          const error429 = new Error('Serveur API DeadCow saturé (429 - Surcharge de requêtes)');
-          error429.status = 429;
-          throw error429;
+          await new Promise(r => setTimeout(r, 1500));
         }
-        const error = new Error(res.status === 408 ? 'Délai d\'attente dépassé (408)' : `Erreur API ${res.status}`);
-        error.status = res.status;
-        throw error;
+        throw new Error(`Erreur API ${res.status}`);
       }
       return await res.json();
     } catch (err) {
       lastError = err;
       if (attempt < retries) {
-        console.warn(`[API] Tentative ${attempt + 1}/${retries + 1} échouée pour ${endpoint}, nouvelle tentative...`);
         await new Promise(r => setTimeout(r, retryDelay));
       }
     }
   }
 
   // Télémétrie d'erreur automatique (POST /send-key-bug)
-  sendErrorTelemetry(endpoint, lastError?.message || 'Erreur API inconnue');
-
+  sendErrorTelemetry(endpoint, lastError?.message || 'Erreur API DeadCow');
   throw lastError;
 }
 
