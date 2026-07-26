@@ -39,7 +39,7 @@
       <button class="nav-btn" data-tab="catalog" data-cat="live"><i class="fa-solid fa-signal"></i> TV & Sports</button>
       <button class="nav-btn" data-tab="catalog" data-cat="schedule"><i class="fa-solid fa-calendar-days"></i> Planning</button>
       <button class="nav-btn" id="open-suggestion-btn"><i class="fa-solid fa-lightbulb"></i> Suggérer</button>
-      <button class="nav-btn" data-tab="scraper-console"><i class="fa-solid fa-terminal"></i> Console</button>
+      <button class="nav-btn" data-tab="scraper-console"><i class="fa-solid fa-user-shield"></i> Admin Panel</button>
     </nav>
   </header>
 
@@ -179,37 +179,136 @@
 
     </section>
 
-    <!-- ══ CONSOLE TAB ═══════════════════════════════════ -->
+    <!-- ══ ADMIN PANEL DASHBOARD TAB ═══════════════════════ -->
     <section id="scraper-console-section" class="tab-content">
-      <div class="console-container">
-        <div class="console-info">
-          <h2><i class="fa-solid fa-circle-nodes"></i> Console & Télémétrie astream</h2>
-          <p>Connecté au réseau astream. Suivi des pings de résolveurs et télémétrie en temps réel.</p>
-          <div class="card glass">
-            <h3><i class="fa-solid fa-heart-pulse"></i> Statut des Résolveurs (Ping Live)</h3>
-            <div id="resolvers-ping-container" style="display:flex;gap:15px;flex-wrap:wrap;margin-top:10px">
-              <span class="ping-badge">Streamelia: ...</span>
-              <span class="ping-badge">Streamflix: ...</span>
-              <span class="ping-badge">Sibnet: ...</span>
-            </div>
+      <div class="console-container" style="max-width:1100px;margin:0 auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;flex-wrap:wrap;gap:15px">
+          <div>
+            <h2 style="font-size:1.8rem;font-weight:800;color:#fff;display:flex;align-items:center;gap:12px">
+              <i class="fa-solid fa-user-shield" style="color:var(--accent-purple)"></i> Panneau d'Administration astream
+            </h2>
+            <p style="color:var(--text-muted);font-size:0.9rem">Gestion globale du serveur, du catalogue, de la télémétrie et de la maintenance.</p>
           </div>
-          <div class="import-box glass" style="margin-top:20px">
-            <h3><i class="fa-solid fa-file-import"></i> Import JSON Manuel</h3>
-            <textarea id="json-import-input" placeholder='Collez un tableau JSON de contenus ici...'></textarea>
-            <button id="import-btn" class="btn btn-primary"><i class="fa-solid fa-check"></i> Importer</button>
-            <div id="import-status" class="status-message"></div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="badge" style="background:rgba(16, 185, 129, 0.15);border:1px solid rgba(16, 185, 129, 0.4);color:#10b981;padding:6px 14px;font-size:0.85rem">
+              <i class="fa-solid fa-circle-check"></i> ADMIN CONNECTÉ
+            </span>
+            <button id="admin-logout-btn" class="btn btn-secondary btn-sm" style="padding:6px 12px;font-size:0.8rem">
+              <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+            </button>
           </div>
         </div>
-          <div class="test-proxy-tool glass" style="margin-top:15px">
-            <h3><i class="fa-solid fa-screwdriver-wrench"></i> Mode Maintenance</h3>
-            <p>Basculez le site en mode maintenance pour afficher l'écran d'interruption aux visiteurs.</p>
-            <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
-              <button id="toggle-maintenance-btn" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-power-off"></i> Activer / Désactiver Maintenance
+
+        <div class="admin-grid">
+
+          <!-- Carte 1: Statut Serveur & Santé -->
+          <div class="admin-card">
+            <h3><i class="fa-solid fa-server" style="color:#3b82f6"></i> Statut Serveur & Santé</h3>
+            <div class="admin-metric-box">
+              <span class="admin-metric-label">Statut Serveur</span>
+              <span class="admin-metric-val" style="color:#10b981">🟢 Opérationnel (200 OK)</span>
+            </div>
+            <div class="admin-metric-box">
+              <span class="admin-metric-label">Temps d'activité (Uptime)</span>
+              <span class="admin-metric-val" id="admin-uptime-val">...</span>
+            </div>
+            <div class="admin-metric-box">
+              <span class="admin-metric-label">Hôte Local</span>
+              <span class="admin-metric-val">http://localhost:3000</span>
+            </div>
+          </div>
+
+          <!-- Carte 2: Mode Maintenance & Annonce -->
+          <div class="admin-card">
+            <h3><i class="fa-solid fa-wrench" style="color:#f59e0b"></i> Mode Maintenance</h3>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:15px">Basculez le site en écran d'interruption temporaire pour les visiteurs.</p>
+            <div class="admin-form-group">
+              <label>Message d'annonce aux visiteurs :</label>
+              <input type="text" id="admin-maint-msg-input" class="admin-input" value="Le site astream est actuellement en cours de maintenance pour mise à jour et optimisation des serveurs.">
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:15px">
+              <button id="toggle-maintenance-btn" class="btn btn-secondary btn-sm" style="background:rgba(245, 158, 11, 0.15);border-color:rgba(245, 158, 11, 0.4);color:#fbbf24;font-weight:600">
+                <i class="fa-solid fa-power-off"></i> Basculer Maintenance
               </button>
               <span id="maintenance-toggle-status" style="font-weight:600;font-size:0.85rem"></span>
             </div>
           </div>
+
+          <!-- Carte 3: Statut Résolveurs Live -->
+          <div class="admin-card">
+            <h3><i class="fa-solid fa-heart-pulse" style="color:#ec4899"></i> Statut Résolveurs Vidéo</h3>
+            <div id="resolvers-ping-container" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+              <span class="ping-badge">Streamelia: Ping...</span>
+              <span class="ping-badge">Streamflix: Ping...</span>
+              <span class="ping-badge">Sibnet: Ping...</span>
+              <span class="ping-badge">VidSrc: Ping...</span>
+            </div>
+          </div>
+
+          <!-- Carte 4: Ajouter un Titre au Catalogue -->
+          <div class="admin-card" style="grid-column: 1 / -1">
+            <h3><i class="fa-solid fa-plus-circle" style="color:var(--accent-purple)"></i> Ajouter un Nouveau Titre au Catalogue</h3>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:12px">
+              <div class="admin-form-group">
+                <label>Titre du Contenu :</label>
+                <input type="text" id="add-item-title" class="admin-input" placeholder="ex: Solo Leveling S2">
+              </div>
+              <div class="admin-form-group">
+                <label>Catégorie / Type :</label>
+                <select id="add-item-type" class="admin-input" style="background:#121420">
+                  <option value="anime">Anime</option>
+                  <option value="movie">Film</option>
+                  <option value="tv">Série TV</option>
+                  <option value="manga">Manga</option>
+                </select>
+              </div>
+              <div class="admin-form-group">
+                <label>Note (0 - 10) :</label>
+                <input type="text" id="add-item-rating" class="admin-input" placeholder="ex: 9.3">
+              </div>
+              <div class="admin-form-group">
+                <label>URL de l'affiche (Poster Image) :</label>
+                <input type="text" id="add-item-poster" class="admin-input" placeholder="https://...">
+              </div>
+            </div>
+            <div class="admin-form-group" style="margin-top:10px">
+              <label>URL de Lecteur Stream / Embed Direct :</label>
+              <input type="text" id="add-item-stream" class="admin-input" placeholder="https://vidsrc.me/embed/movie?tmdb=... ou URL direct MP4/HLS">
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:15px">
+              <button id="add-item-btn" class="btn btn-primary"><i class="fa-solid fa-check"></i> Ajouter au Catalogue Live</button>
+              <span id="add-item-status" style="font-size:0.85rem"></span>
+            </div>
+          </div>
+
+          <!-- Carte 5: Import & Export Catalogue JSON -->
+          <div class="admin-card">
+            <h3><i class="fa-solid fa-file-export" style="color:var(--accent-cyan)"></i> Import & Export JSON</h3>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px">Sauvegardez ou importez des tableaux de données JSON.</p>
+            <div style="display:flex;gap:10px;margin-bottom:12px">
+              <button id="export-catalog-btn" class="btn btn-secondary btn-sm" style="flex:1"><i class="fa-solid fa-download"></i> Exporter JSON</button>
+            </div>
+            <textarea id="json-import-input" class="admin-input" style="height:80px;font-family:monospace" placeholder='Collez un tableau JSON ici...'></textarea>
+            <button id="import-btn" class="btn btn-primary btn-sm" style="width:100%;margin-top:10px"><i class="fa-solid fa-check"></i> Importer Tableau JSON</button>
+            <div id="import-status" class="status-message" style="margin-top:8px"></div>
+          </div>
+
+          <!-- Carte 6: Traitement des Suggestions Utilisateurs -->
+          <div class="admin-card">
+            <h3><i class="fa-solid fa-lightbulb" style="color:#f59e0b"></i> Suggestions des Utilisateurs</h3>
+            <div id="admin-suggestions-list" style="max-height:180px;overflow-y:auto;padding-right:5px">
+              <p style="font-size:0.85rem;color:var(--text-muted)">Aucune nouvelle suggestion reçue.</p>
+            </div>
+          </div>
+
+          <!-- Carte 7: Outil de Test de Flux Proxy -->
+          <div class="admin-card">
+            <h3><i class="fa-solid fa-screwdriver-wrench" style="color:#10b981"></i> Testeur de Flux Vidéo</h3>
+            <input type="text" id="test-proxy-url" class="admin-input" placeholder="URL vidéo (ex: https://.../video.mp4)" style="margin-bottom:10px">
+            <input type="text" id="test-proxy-referer" class="admin-input" placeholder="Referer (Optionnel)" style="margin-bottom:10px">
+            <button id="test-proxy-btn" class="btn btn-secondary btn-sm" style="width:100%"><i class="fa-solid fa-play"></i> Lancer le Test Dans le Lecteur</button>
+          </div>
+
         </div>
       </div>
     </section>

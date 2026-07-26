@@ -1560,52 +1560,22 @@ function closeModal(modal) {
   }
 }
 
-// ─── Console Tools ────────────────────────────────────────────
+// ─── Panneau d'Administration Dashboard (Admin Panel) ─────────
 function setupConsole() {
-  const importBtn   = $('import-btn');
-  const importInput = $('json-import-input');
-  const importStat  = $('import-status');
-  const testBtn     = $('test-proxy-btn');
-  const testUrl     = $('test-proxy-url');
-  const testRef     = $('test-proxy-referer');
+  const importBtn          = $('import-btn');
+  const importInput        = $('json-import-input');
+  const importStat         = $('import-status');
+  const testBtn            = $('test-proxy-btn');
+  const testUrl            = $('test-proxy-url');
+  const testRef            = $('test-proxy-referer');
+  const toggleMaintBtn     = $('toggle-maintenance-btn');
+  const disableMaintOverlayBtn = $('disable-maintenance-overlay-btn');
+  const maintStatus        = $('maintenance-toggle-status');
+  const exportBtn          = $('export-catalog-btn');
+  const addItemBtn         = $('add-item-btn');
+  const logoutBtn          = $('admin-logout-btn');
 
-  if (importBtn) {
-    importBtn.addEventListener('click', () => {
-      try {
-        const data = JSON.parse(importInput.value.trim());
-        if (!Array.isArray(data)) throw new Error('Le JSON doit être un tableau.');
-        const grid = $('grid-anime');
-        grid.innerHTML = '';
-        renderCards(grid, data);
-        importStat.style.color = '#10b981';
-        importStat.textContent = `✓ ${data.length} éléments importés !`;
-      } catch (e) {
-        importStat.style.color = '#ef4444';
-        importStat.textContent = `Erreur : ${e.message}`;
-      }
-    });
-  }
-
-  if (testBtn) {
-    testBtn.addEventListener('click', () => {
-      const url = testUrl.value.trim();
-      if (!url) return alert('Entrez une URL.');
-      stopPlayer();
-      playerAnimeTitle.textContent = 'Test Proxy';
-      playerEpTitle.textContent    = url;
-      videoLoader.classList.add('active');
-      openModal(playerModal);
-      let pUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
-      if (testRef.value.trim()) pUrl += `&referer=${encodeURIComponent(testRef.value.trim())}`;
-      buildSourceSelector({ streamUrl: pUrl, embeds: {} });
-      playStream(pUrl);
-    });
-  }
-
-  const toggleMaintBtn          = $('toggle-maintenance-btn');
-  const disableMaintOverlayBtn  = $('disable-maintenance-overlay-btn');
-  const maintStatus             = $('maintenance-toggle-status');
-
+  // Authentification & Mot de passe Admin
   const getAdminPassword = () => {
     let pass = localStorage.getItem('astream_admin_pass');
     if (!pass) {
@@ -1615,6 +1585,16 @@ function setupConsole() {
     return pass;
   };
 
+  // 1. Déconnexion Admin
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('astream_admin_pass');
+      alert('🔒 Déconnecté du Panneau d\'Administration.');
+      showTab('catalog', 'all');
+    });
+  }
+
+  // 2. Basculement Mode Maintenance (Protégé)
   const toggleMaintenance = async (forceDisable = false) => {
     let password = getAdminPassword();
     if (!password) return alert('Action annulée. Mot de passe administrateur requis.');
@@ -1622,6 +1602,10 @@ function setupConsole() {
     try {
       const payload = { password };
       if (forceDisable) payload.enabled = false;
+      const maintMsgInput = $('admin-maint-msg-input');
+      if (maintMsgInput && maintMsgInput.value.trim()) {
+        payload.message = maintMsgInput.value.trim();
+      }
 
       const res = await fetch('/api/maintenance/toggle', {
         method: 'POST',
@@ -1653,4 +1637,128 @@ function setupConsole() {
 
   if (toggleMaintBtn) toggleMaintBtn.addEventListener('click', () => toggleMaintenance(false));
   if (disableMaintOverlayBtn) disableMaintOverlayBtn.addEventListener('click', () => toggleMaintenance(true));
+
+  // 3. Ajouter un Titre au Catalogue Live
+  if (addItemBtn) {
+    addItemBtn.addEventListener('click', () => {
+      const title  = $('add-item-title')?.value.trim();
+      const type   = $('add-item-type')?.value || 'anime';
+      const rating = parseFloat($('add-item-rating')?.value || '9.0');
+      const poster = $('add-item-poster')?.value.trim() || NO_IMAGE_SVG;
+      const stream = $('add-item-stream')?.value.trim();
+      const statusSpan = $('add-item-status');
+
+      if (!title) return alert('Veuillez entrer au moins un titre.');
+
+      const newItem = {
+        id: stream || `custom_${Date.now()}`,
+        title,
+        type,
+        rating,
+        poster,
+        streamUrl: stream,
+        embedUrl: stream,
+        genres: [{ name: 'Ajout Admin' }]
+      };
+
+      const gridId = type === 'live' ? 'grid-live-channels' : `grid-${type}`;
+      const grid = $(gridId) || $('grid-anime');
+      if (grid) {
+        renderCards(grid, [newItem]);
+        if (statusSpan) {
+          statusSpan.style.color = '#10b981';
+          statusSpan.textContent = `✓ "${title}" ajouté avec succès au catalogue !`;
+        }
+      }
+    });
+  }
+
+  // 4. Exporter le Catalogue JSON en Téléchargement Fichier
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      const catalogData = window._currentCatalogData || [];
+      const jsonStr = JSON.stringify(catalogData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `astream_catalog_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  // 5. Importer du JSON Manuel
+  if (importBtn) {
+    importBtn.addEventListener('click', () => {
+      try {
+        const data = JSON.parse(importInput.value.trim());
+        if (!Array.isArray(data)) throw new Error('Le JSON doit être un tableau.');
+        const grid = $('grid-anime');
+        grid.innerHTML = '';
+        renderCards(grid, data);
+        importStat.style.color = '#10b981';
+        importStat.textContent = `✓ ${data.length} éléments importés !`;
+      } catch (e) {
+        importStat.style.color = '#ef4444';
+        importStat.textContent = `Erreur : ${e.message}`;
+      }
+    });
+  }
+
+  // 6. Testeur de Flux Vidéo
+  if (testBtn) {
+    testBtn.addEventListener('click', () => {
+      const url = testUrl.value.trim();
+      if (!url) return alert('Entrez une URL.');
+      stopPlayer();
+      playerAnimeTitle.textContent = 'Test Proxy Admin';
+      playerEpTitle.textContent    = url;
+      videoLoader.classList.add('active');
+      openModal(playerModal);
+      let pUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+      if (testRef.value.trim()) pUrl += `&referer=${encodeURIComponent(testRef.value.trim())}`;
+      buildSourceSelector({ streamUrl: pUrl, embeds: {} });
+      playStream(pUrl);
+    });
+  }
+
+  // 7. Rendu des Suggestions Utilisateurs dans le Dashboard
+  window.renderAdminSuggestions = () => {
+    const listContainer = $('admin-suggestions-list');
+    if (!listContainer) return;
+    const sugs = JSON.parse(localStorage.getItem('astream_suggestions') || '[]');
+    if (sugs.length === 0) {
+      listContainer.innerHTML = `<p style="font-size:0.85rem;color:var(--text-muted)">Aucune nouvelle suggestion reçue.</p>`;
+      return;
+    }
+
+    listContainer.innerHTML = sugs.map(s => `
+      <div class="sug-list-item">
+        <div>
+          <strong style="color:#fff">${s.title}</strong>
+          <span style="font-size:0.75rem;color:var(--accent-cyan);margin-left:8px">[${s.category.toUpperCase()}]</span>
+          <div style="font-size:0.75rem;color:var(--text-muted)">Par ${s.pseudo} à ${s.date}</div>
+        </div>
+        <button onclick="approveSuggestion(${s.id}, '${s.title.replace(/'/g, "\\'")}', '${s.category}')" class="btn btn-primary btn-sm" style="padding:4px 10px;font-size:0.75rem">
+          <i class="fa-solid fa-plus"></i> Ajouter
+        </button>
+      </div>
+    `).join('');
+  };
+
+  window.approveSuggestion = (id, title, category) => {
+    const titleInput = $('add-item-title');
+    const typeInput  = $('add-item-type');
+    if (titleInput) titleInput.value = title;
+    if (typeInput)  typeInput.value  = category === 'film' ? 'movie' : (category === 'serie' ? 'tv' : category);
+
+    const sugs = JSON.parse(localStorage.getItem('astream_suggestions') || '[]');
+    const filtered = sugs.filter(s => s.id !== id);
+    localStorage.setItem('astream_suggestions', JSON.stringify(filtered));
+    renderAdminSuggestions();
+    alert(`💡 Titre "${title}" prérempli dans le formulaire d'ajout !`);
+  };
+
+  renderAdminSuggestions();
 }
