@@ -1606,40 +1606,51 @@ function setupConsole() {
   const disableMaintOverlayBtn  = $('disable-maintenance-overlay-btn');
   const maintStatus             = $('maintenance-toggle-status');
 
-  const toggleMaintenance = async () => {
+  const getAdminPassword = () => {
+    let pass = localStorage.getItem('astream_admin_pass');
+    if (!pass) {
+      pass = prompt('🔐 Entrez le mot de passe Administrateur astream :');
+      if (pass) localStorage.setItem('astream_admin_pass', pass);
+    }
+    return pass;
+  };
+
+  const toggleMaintenance = async (forceDisable = false) => {
+    let password = getAdminPassword();
+    if (!password) return alert('Action annulée. Mot de passe administrateur requis.');
+
     try {
-      const res = await fetch('/api/maintenance/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: false }) });
+      const payload = { password };
+      if (forceDisable) payload.enabled = false;
+
+      const res = await fetch('/api/maintenance/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
       const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        localStorage.removeItem('astream_admin_pass');
+        alert(`❌ Accès refusé : ${data.error || 'Mot de passe incorrect'}`);
+        return;
+      }
+
       const maintOverlay = $('maintenance-overlay');
       if (maintOverlay) {
-        maintOverlay.style.display = data.maintenance ? 'flex' : 'none';
+        if (data.maintenance) maintOverlay.classList.add('active');
+        else maintOverlay.classList.remove('active');
       }
+
       if (maintStatus) {
         maintStatus.style.color = data.maintenance ? '#f59e0b' : '#10b981';
         maintStatus.textContent = data.maintenance ? '🟡 Mode Maintenance ACTIVÉ' : '🟢 Mode Normal (En ligne)';
       }
     } catch (e) {
-      if (maintStatus) maintStatus.textContent = 'Erreur basculement';
+      alert(`Erreur : ${e.message}`);
     }
   };
 
-  const toggleMaintenanceToggle = async () => {
-    try {
-      const res = await fetch('/api/maintenance/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-      const data = await res.json();
-      const maintOverlay = $('maintenance-overlay');
-      if (maintOverlay) {
-        maintOverlay.style.display = data.maintenance ? 'flex' : 'none';
-      }
-      if (maintStatus) {
-        maintStatus.style.color = data.maintenance ? '#f59e0b' : '#10b981';
-        maintStatus.textContent = data.maintenance ? '🟡 Mode Maintenance ACTIVÉ' : '🟢 Mode Normal (En ligne)';
-      }
-    } catch (e) {
-      if (maintStatus) maintStatus.textContent = 'Erreur basculement';
-    }
-  };
-
-  if (toggleMaintBtn) toggleMaintBtn.addEventListener('click', toggleMaintenanceToggle);
-  if (disableMaintOverlayBtn) disableMaintOverlayBtn.addEventListener('click', toggleMaintenance);
+  if (toggleMaintBtn) toggleMaintBtn.addEventListener('click', () => toggleMaintenance(false));
+  if (disableMaintOverlayBtn) disableMaintOverlayBtn.addEventListener('click', () => toggleMaintenance(true));
 }

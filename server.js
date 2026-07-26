@@ -85,17 +85,27 @@ app.get('/api/maintenance/status', (req, res) => {
   res.json({ maintenance: isMaintenanceMode, message: maintenanceMessage });
 });
 
-// API : Basculement du mode maintenance (Toggle ON/OFF)
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'astream2026';
+
+// API : Basculement du mode maintenance (Protégé par Mot de Passe Admin)
 app.post('/api/maintenance/toggle', (req, res) => {
-  if (req.body && typeof req.body.enabled === 'boolean') {
-    isMaintenanceMode = req.body.enabled;
+  const { password, enabled, message } = req.body || {};
+
+  if (password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ success: false, error: 'Mot de passe administrateur incorrect.' });
+  }
+
+  if (typeof enabled === 'boolean') {
+    isMaintenanceMode = enabled;
   } else {
     isMaintenanceMode = !isMaintenanceMode;
   }
-  if (req.body && req.body.message) {
-    maintenanceMessage = req.body.message;
+
+  if (message) {
+    maintenanceMessage = message;
   }
-  console.log(`[Maintenance] Mode maintenance : ${isMaintenanceMode ? 'ACTIVÉ 🟡' : 'DÉSACTIVÉ 🟢'}`);
+
+  console.log(`[Maintenance] Basculement Admin : ${isMaintenanceMode ? 'ACTIVÉ 🟡' : 'DÉSACTIVÉ 🟢'}`);
   res.json({ success: true, maintenance: isMaintenanceMode, message: maintenanceMessage });
 });
 
