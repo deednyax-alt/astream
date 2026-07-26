@@ -1,0 +1,95 @@
+[
+  {
+    "id": "demon-slayer",
+    "title": "Demon Slayer: Kimetsu no Yaiba",
+    "synopsis": "Le Japon, à l'ère Taisho. Tanjirou est un jeune garçon au grand cœur qui vend du charbon pour nourrir sa famille. Mais sa vie bascule lorsque celle-ci est massacrée par un démon. Sa jeune sœur Nezuko, seule survivante, est elle-même transformée en démon. Tanjirou décide de devenir un tueur de démons pour venger sa famille et rendre à sa sœur sa forme humaine.",
+    "image": "https://cdn.myanimelist.net/images/anime/1286/99889.jpg",
+    "banner": "https://images5.alphacoders.com/102/1027170.jpg",
+    "rating": "8.7",
+    "genres": ["Action", "Fantasy", "Historical"],
+    "episodes": [
+      {
+        "number": 1,
+        "title": "Cruauté",
+        "streams": [
+          {
+            "host": "Direct HD (Test 1)",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4",
+            "referer": ""
+          },
+          {
+            "host": "Proxy Stream (Test 2)",
+            "url": "https://www.w3schools.com/html/movie.mp4",
+            "referer": "https://www.w3schools.com"
+          }
+        ]
+      },
+      {
+        "number": 2,
+        "title": "Le formateur Sakonji Urokodaki",
+        "streams": [
+          {
+            "host": "Direct HD (Test)",
+            "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+            "referer": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "attack-on-titan",
+    "title": "L'Attaque des Titans (Shingeki no Kyojin)",
+    "synopsis": "Dans un monde ravagé par des Titans mangeurs d'hommes, l'humanité s'est retranchée derrière trois remparts de 50 mètres de haut. Eren Jäger, un adolescent téméraire, jure d'exterminer jusqu'au dernier des Titans après avoir vu l'un d'eux dévorer sa mère.",
+    "image": "https://cdn.myanimelist.net/images/anime/10/47347.jpg",
+    "banner": "https://images2.alphacoders.com/508/508608.jpg",
+    "rating": "9.1",
+    "genres": ["Action", "Drama", "Suspense"],
+    "episodes": [
+      {
+        "number": 1,
+        "title": "À toi, deux mille ans plus tard",
+        "streams": [
+          {
+            "host": "Direct HD (Test)",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4",
+            "referer": ""
+          }
+        ]
+      },
+      {
+        "number": 2,
+        "title": "Ce jour-là - La chute de Shiganshina, partie 2",
+        "streams": [
+          {
+            "host": "Direct HD (Test)",
+            "url": "https://www.w3schools.com/html/movie.mp4",
+            "referer": ""
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "one-piece",
+    "title": "One Piece",
+    "synopsis": "Monkey D. Luffy est un jeune pirate qui rêve de devenir le roi des pirates en trouvant le légendaire trésor 'One Piece' laissé par Gol D. Roger. Accompagné de son équipage hétéroclite, il parcourt les mers du monde entier et affronte de puissants ennemis.",
+    "image": "https://cdn.myanimelist.net/images/anime/1244/138851.jpg",
+    "banner": "https://images7.alphacoders.com/131/1315607.jpeg",
+    "rating": "8.9",
+    "genres": ["Action", "Adventure", "Fantasy"],
+    "episodes": [
+      {
+        "number": 1,
+        "title": "Je suis Luffy ! Celui qui deviendra le Roi des Pirates !",
+        "streams": [
+          {
+            "host": "Direct HD (Test)",
+            "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+            "referer": ""
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "name": "anime-stream-proxy",
+  "version": "1.0.0",
+  "description": "Premium Anime Streaming site with local scraper and ad-blocking video proxy",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "scrape": "node scraper/scrape.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "anime-stream-proxy": "file:",
+    "axios": "^1.7.2",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "puppeteer": "^22.12.1"
+  }
+}

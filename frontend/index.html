@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>astream — Streaming Premium | Animes · Séries · Films · Mangas · TV Direct</title>
+  <meta name="description" content="Plateforme de streaming astream : animes VF/VOSTFR, séries TV, films, mangas et TV en direct.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+
+  <div class="glow-orb orb-1"></div>
+  <div class="glow-orb orb-2"></div>
+
+  <!-- ── HEADER ───────────────────────────────────────────── -->
+  <header>
+    <div class="logo">
+      <span class="gradient-text">astream</span>
+      <span class="badge">PREMIUM</span>
+    </div>
+
+    <div class="search-container">
+      <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      <input type="text" id="search-input" placeholder="Rechercher un titre…">
+    </div>
+
+    <nav>
+      <button class="nav-btn active" data-tab="catalog" data-cat="all"><i class="fa-solid fa-house"></i> Accueil</button>
+      <button class="nav-btn" data-tab="catalog" data-cat="anime"><i class="fa-solid fa-dragon"></i> Animes</button>
+      <button class="nav-btn" data-tab="catalog" data-cat="tv"><i class="fa-solid fa-tv"></i> Séries</button>
+      <button class="nav-btn" data-tab="catalog" data-cat="movie"><i class="fa-solid fa-film"></i> Films</button>
+      <button class="nav-btn" data-tab="catalog" data-cat="manga"><i class="fa-solid fa-book-open"></i> Mangas</button>
+      <button class="nav-btn" data-tab="catalog" data-cat="live"><i class="fa-solid fa-signal"></i> TV & Sports</button>
+      <button class="nav-btn" data-tab="catalog" data-cat="schedule"><i class="fa-solid fa-calendar-days"></i> Planning</button>
+      <button class="nav-btn" id="open-suggestion-btn"><i class="fa-solid fa-lightbulb"></i> Suggérer</button>
+      <button class="nav-btn" data-tab="scraper-console"><i class="fa-solid fa-terminal"></i> Console</button>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ══ CATALOGUE TAB ════════════════════════════════════ -->
+    <section id="catalog-section" class="tab-content active">
+
+      <!-- Hero Banner -->
+      <div id="hero-banner" class="hero-banner">
+        <div class="hero-content">
+          <div class="hero-meta">
+            <span class="rating"><i class="fa-solid fa-star"></i> <span id="hero-rating">—</span></span>
+            <span class="genres" id="hero-genres">—</span>
+          </div>
+          <h1 id="hero-title">Chargement…</h1>
+          <p id="hero-synopsis"></p>
+          <div class="hero-actions">
+            <button id="hero-play-btn" class="btn btn-primary"><i class="fa-solid fa-play"></i> Regarder</button>
+            <button id="hero-info-btn" class="btn btn-secondary"><i class="fa-solid fa-circle-info"></i> Plus d'infos</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Onglets de Catégories / Barre d'État ───────────────────────── -->
+      <div class="category-tabs-container">
+        <div class="category-tabs" id="category-tabs">
+          <button class="cat-tab active" data-cat="all" data-type="all">
+            <i class="fa-solid fa-fire"></i> Tendances
+          </button>
+          <button class="cat-tab" data-cat="anime" data-type="anime">
+            <i class="fa-solid fa-dragon"></i> Animes
+          </button>
+          <button class="cat-tab" data-cat="tv" data-type="tv">
+            <i class="fa-solid fa-tv"></i> Séries TV
+          </button>
+          <button class="cat-tab" data-cat="movie" data-type="movie">
+            <i class="fa-solid fa-film"></i> Films
+          </button>
+          <button class="cat-tab" data-cat="manga" data-type="manga">
+            <i class="fa-solid fa-book-open"></i> Mangas & Scans
+          </button>
+          <button class="cat-tab" data-cat="live" data-type="live">
+            <i class="fa-solid fa-signal"></i> TV & Sports
+          </button>
+          <button class="cat-tab" data-cat="schedule" data-type="schedule">
+            <i class="fa-solid fa-calendar-days"></i> Planning
+          </button>
+        </div>
+        <div class="cat-status-container">
+          <span class="status-indicator" id="data-source-badge">Chargement…</span>
+          <button id="load-more-btn" class="btn btn-secondary btn-sm" style="display:none">
+            <i class="fa-solid fa-plus"></i> Voir plus
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Barre de Filtre par Genre ─────────────────────── -->
+      <div class="genre-bar-container" id="genre-bar-container">
+        <div class="genre-pills" id="genre-pills">
+          <button class="genre-pill active" data-genre="all">Tous les genres</button>
+        </div>
+      </div>
+
+      <!-- ── Section Accueil / Tous ────────────────────── -->
+      <div id="cat-all" class="category-section active">
+        <div class="section-title-container">
+          <h2 class="section-title"><i class="fa-solid fa-fire" style="color:#f59e0b"></i> Tendances du Moment</h2>
+        </div>
+        <div class="anime-grid" id="grid-all"></div>
+      </div>
+
+      <!-- ── Section Anime ──────────────────────────────── -->
+      <div id="cat-anime" class="category-section">
+        <div class="section-title-container">
+          <h2 class="section-title"><i class="fa-solid fa-dragon" style="color:var(--accent-purple)"></i> Catalogue Animes (VF & VOSTFR)</h2>
+        </div>
+        <div class="anime-grid" id="grid-anime"></div>
+      </div>
+
+      <!-- ── Section Séries TV ──────────────────────────── -->
+      <div id="cat-tv" class="category-section">
+        <div class="section-title-container">
+          <h2 class="section-title"><i class="fa-solid fa-tv" style="color:var(--accent-cyan)"></i> Séries TV Populaires</h2>
+        </div>
+        <div class="anime-grid" id="grid-tv"></div>
+      </div>
+
+      <!-- ── Section Films ──────────────────────────────── -->
+      <div id="cat-movie" class="category-section">
+        <div class="section-title-container">
+          <h2 class="section-title"><i class="fa-solid fa-film" style="color:#f59e0b"></i> Films Populaires</h2>
+        </div>
+        <div class="anime-grid" id="grid-movie"></div>
+      </div>
+
+      <!-- ── Section Mangas & Scans ─────────────────────── -->
+      <div id="cat-manga" class="category-section">
+        <div class="section-title-container">
+          <h2 class="section-title"><i class="fa-solid fa-book-open" style="color:#ec4899"></i> Mangas, Manhwas & Scans (MangaDex HD)</h2>
+        </div>
+        <div class="anime-grid" id="grid-manga"></div>
+      </div>
+
+      <!-- ── Section TV Direct & Sports ─────────────────── -->
+      <div id="cat-live" class="category-section">
+        <div class="section-title-container" style="gap:15px;flex-wrap:wrap">
+          <h2 class="section-title"><i class="fa-solid fa-signal" style="color:#ef4444"></i> Direct & Live Sports <span class="live-dot"></span></h2>
+          <div class="sub-tab-group">
+            <button class="sub-tab active" id="subtab-channels"><i class="fa-solid fa-tv"></i> 250+ Chaînes TV</button>
+            <button class="sub-tab" id="subtab-matches"><i class="fa-solid fa-futbol"></i> Matchs Live Sports</button>
+          </div>
+        </div>
+        <div class="channel-grid active" id="grid-live-channels"></div>
+        <div class="anime-grid" id="grid-live-matches" style="display:none"></div>
+      </div>
+
+      <!-- ── Section Planning des Sorties ────────────────── -->
+      <div id="cat-schedule" class="category-section">
+        <div class="section-title-container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;margin-bottom:20px">
+          <h2 class="section-title"><i class="fa-solid fa-calendar-days" style="color:var(--accent-purple)"></i> Planning Hebdomadaire des Sorties</h2>
+          <div class="sub-tab-group" id="schedule-day-tabs" style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="sub-tab" data-day="lundi">Lundi</button>
+            <button class="sub-tab" data-day="mardi">Mardi</button>
+            <button class="sub-tab" data-day="mercredi">Mercredi</button>
+            <button class="sub-tab" data-day="jeudi">Jeudi</button>
+            <button class="sub-tab" data-day="vendredi">Vendredi</button>
+            <button class="sub-tab" data-day="samedi">Samedi</button>
+            <button class="sub-tab" data-day="dimanche">Dimanche</button>
+          </div>
+        </div>
+        <div class="anime-grid" id="grid-schedule"></div>
+      </div>
+
+      <!-- ── Barre de Pagination Dynamique par Onglets ── -->
+      <div class="pagination-container" id="pagination-container"></div>
+
+    </section>
+
+    <!-- ══ CONSOLE TAB ═══════════════════════════════════ -->
+    <section id="scraper-console-section" class="tab-content">
+      <div class="console-container">
+        <div class="console-info">
+          <h2><i class="fa-solid fa-circle-nodes"></i> Console & Télémétrie astream</h2>
+          <p>Connecté au réseau astream. Suivi des pings de résolveurs et télémétrie en temps réel.</p>
+          <div class="card glass">
+            <h3><i class="fa-solid fa-heart-pulse"></i> Statut des Résolveurs (Ping Live)</h3>
+            <div id="resolvers-ping-container" style="display:flex;gap:15px;flex-wrap:wrap;margin-top:10px">
+              <span class="ping-badge">Streamelia: ...</span>
+              <span class="ping-badge">Streamflix: ...</span>
+              <span class="ping-badge">Sibnet: ...</span>
+            </div>
+          </div>
+          <div class="import-box glass" style="margin-top:20px">
+            <h3><i class="fa-solid fa-file-import"></i> Import JSON Manuel</h3>
+            <textarea id="json-import-input" placeholder='Collez un tableau JSON de contenus ici...'></textarea>
+            <button id="import-btn" class="btn btn-primary"><i class="fa-solid fa-check"></i> Importer</button>
+            <div id="import-status" class="status-message"></div>
+          </div>
+        </div>
+          <div class="test-proxy-tool glass" style="margin-top:15px">
+            <h3><i class="fa-solid fa-screwdriver-wrench"></i> Mode Maintenance</h3>
+            <p>Basculez le site en mode maintenance pour afficher l'écran d'interruption aux visiteurs.</p>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+              <button id="toggle-maintenance-btn" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-power-off"></i> Activer / Désactiver Maintenance
+              </button>
+              <span id="maintenance-toggle-status" style="font-weight:600;font-size:0.85rem"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ══ MODAL DÉTAILS ════════════════════════════════════ -->
+  <div id="details-modal" class="modal">
+    <div class="modal-content glass">
+      <span class="close-btn" id="close-modal-btn">&times;</span>
+      <div class="modal-body">
+        <div class="modal-banner" id="modal-banner"></div>
+        <div class="modal-info">
+          <div class="modal-header-info">
+            <h2 id="modal-title">Titre</h2>
+            <div class="modal-meta">
+              <span class="rating"><i class="fa-solid fa-star"></i> <span id="modal-rating">—</span></span>
+              <span class="genres" id="modal-genres">—</span>
+            </div>
+          </div>
+          <p id="modal-synopsis">—</p>
+          <h3 class="episodes-title" id="episodes-section-title"><i class="fa-solid fa-list"></i> Épisodes / Chapitres</h3>
+          <div class="episodes-grid" id="modal-episodes-grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL LECTEUR MANGA & SCANS ══════════════════════ -->
+  <div id="manga-reader-modal" class="modal manga-modal">
+    <div class="modal-content manga-reader-content">
+      <div class="manga-reader-header">
+        <div>
+          <h3 id="manga-title">Manga</h3>
+          <span id="manga-chapter-title" style="color:var(--accent-cyan);font-size:0.9rem">Chapitre —</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <select id="manga-chapter-select" class="glass-select"></select>
+          <button class="btn btn-secondary btn-sm" id="manga-mode-toggle"><i class="fa-solid fa-scroll"></i> Continu</button>
+          <span class="close-btn" id="close-manga-btn">&times;</span>
+        </div>
+      </div>
+      <div class="manga-pages-viewer" id="manga-pages-viewer">
+        <div class="video-loader active" id="manga-loader">
+          <div class="loader-spinner"></div>
+          <p>Chargement des pages HD MangaDex…</p>
+        </div>
+        <div class="manga-single-page" id="manga-single-page">
+          <img id="manga-current-img" src="" alt="Page Manga">
+        </div>
+        <div class="manga-scroll-container" id="manga-scroll-container" style="display:none"></div>
+      </div>
+      <div class="manga-reader-controls">
+        <button id="manga-prev-page" class="btn btn-secondary"><i class="fa-solid fa-chevron-left"></i> Précédent</button>
+        <span class="manga-page-counter" id="manga-page-counter">Page 1 / 1</span>
+        <button id="manga-next-page" class="btn btn-primary">Suivant <i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL LECTEUR PREMIUM VIDÉO ══════════════════════ -->
+  <div id="player-modal" class="modal player-modal">
+    <div class="modal-content player-modal-content">
+      <span class="close-btn" id="close-player-btn">&times;</span>
+      <div class="player-header">
+        <h3 id="player-anime-title">Titre</h3>
+        <p id="player-episode-title">—</p>
+      </div>
+      <div class="video-container-wrapper">
+        <video id="premium-video-player" controls playsinline>
+          Votre navigateur ne supporte pas la lecture HTML5.
+        </video>
+        <iframe id="premium-iframe-player" allow="autoplay; fullscreen; accelerometer; gyroscope; magnetometer" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;border:none;z-index:1;"></iframe>
+        <div id="video-loader" class="video-loader">
+          <div class="loader-spinner"></div>
+          <p>Connexion sécurisée astream…</p>
+        </div>
+      </div>
+      <div class="player-controls-info">
+        <div class="source-selector-container">
+          <label for="stream-source-select"><i class="fa-solid fa-server"></i> Source :</label>
+          <select id="stream-source-select" class="glass-select"></select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="version-btn active" data-version="vf">VF</button>
+          <button class="version-btn" data-version="vostfr">VOSTFR</button>
+          <span class="proxy-active-badge"><i class="fa-solid fa-shield-halved"></i> Ad-Block Actif</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL SUGGESTION ═════════════════════════════════ -->
+  <div id="suggestion-modal" class="modal">
+    <div class="modal-content glass" style="max-width:480px">
+      <span class="close-btn" id="close-suggestion-btn">&times;</span>
+      <h3 style="margin-bottom:15px;color:var(--text-main)"><i class="fa-solid fa-lightbulb" style="color:#f59e0b"></i> Suggérer un Titre</h3>
+      <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:15px">Proposez un anime, un film ou une série à ajouter au catalogue astream.</p>
+      <input type="text" id="sug-title" placeholder="Titre du contenu (ex: Inception)" style="width:100%;padding:10px;margin-bottom:10px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);color:#fff">
+      <select id="sug-cat" class="glass-select" style="width:100%;margin-bottom:10px;padding:10px">
+        <option value="anime">Anime</option>
+        <option value="film">Film</option>
+        <option value="serie">Série TV</option>
+        <option value="manga">Manga / Scan</option>
+      </select>
+      <input type="text" id="sug-pseudo" placeholder="Votre pseudo (optionnel)" style="width:100%;padding:10px;margin-bottom:15px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);color:#fff">
+      <button id="send-sug-btn" class="btn btn-primary" style="width:100%"><i class="fa-solid fa-paper-plane"></i> Envoyer la suggestion</button>
+      <div id="sug-status" style="margin-top:10px;font-size:0.85rem"></div>
+    </div>
+  </div>
+
+  <!-- ══ ÉCRAN MODE MAINTENANCE (MAINTENANCE OVERLAY) ════════════ -->
+  <div id="maintenance-overlay" class="offline-overlay">
+    <div class="offline-card glass" style="border-color:rgba(245, 158, 11, 0.45);box-shadow:0 0 50px rgba(245, 158, 11, 0.25), 0 20px 40px rgba(0, 0, 0, 0.8);">
+      <div class="offline-pulse-ring" style="background:rgba(245, 158, 11, 0.15);border-color:rgba(245, 158, 11, 0.5);box-shadow:0 0 30px rgba(245, 158, 11, 0.4);animation:pulseGlowAmber 2s infinite ease-in-out;">
+        <i class="fa-solid fa-wrench" style="color:#f59e0b"></i>
+      </div>
+      <h2><i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b"></i> Site en Maintenance</h2>
+      <p id="maintenance-msg-text">Le site <strong>astream</strong> est actuellement en cours de maintenance pour mise à jour et optimisation des serveurs.</p>
+      <div class="offline-status-box">
+        <span class="offline-badge" style="background:rgba(245, 158, 11, 0.12);border-color:rgba(245, 158, 11, 0.35);color:#fbbf24;"><i class="fa-solid fa-gear fa-spin"></i> Service rétabli très prochainement</span>
+      </div>
+      <p class="offline-subtext">Merci de votre patience ! Nous serons de retour dans quelques minutes.</p>
+    </div>
+  </div>
+
+  <!-- ══ ÉCRAN SERVEUR HORS-LIGNE (OFFLINE OVERLAY) ══════════════ -->
+  <div id="server-offline-overlay" class="offline-overlay">
+    <div class="offline-card glass">
+      <div class="offline-pulse-ring">
+        <i class="fa-solid fa-server"></i>
+      </div>
+      <h2><i class="fa-solid fa-circle-exclamation" style="color:#ef4444"></i> Serveur Hors-Ligne</h2>
+      <p>Le serveur <strong>astream</strong> est temporairement éteint ou en cours de redémarrage.</p>
+      <div class="offline-status-box">
+        <span class="offline-badge"><i class="fa-solid fa-rotate fa-spin"></i> Tentative de reconnexion automatique...</span>
+      </div>
+      <p class="offline-subtext">Le service sera rétabli automatiquement dès que le serveur sera relancé.</p>
+    </div>
+  </div>
+
+  <footer>
+    <p>Conçu avec <i class="fa-solid fa-heart animate-pulse"></i> par astream</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
