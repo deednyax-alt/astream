@@ -7,9 +7,67 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Masquer le header d'empreinte Express
+app.disable('x-powered-by');
+
 // Activer CORS pour permettre au frontend d'accéder au proxy
 app.use(cors());
 app.use(express.json());
+
+// ─── Middleware En-têtes de Sécurité HTTP (Helmet-style Security) ──
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
+// ─── Limitation du Débit (Rate Limiting Anti-DDoS) ───────────
+const ipRequestCounts = new Map();
+app.use((req, res, next) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+  const now = Date.now();
+  const record = ipRequestCounts.get(ip) || { count: 0, resetTime: now + 60000 };
+
+  if (now > record.resetTime) {
+    record.count = 0;
+    record.resetTime = now + 60000;
+  }
+
+  record.count++;
+  ipRequestCounts.set(ip, record);
+
+  if (record.count > 150) {
+    return res.status(429).json({ success: false, error: 'Trop de requêtes. Veuillez patienter 1 minute.' });
+  }
+  next();
+});
+
+// ─── Protection Anti-SSRF (URLs internes / privées interdites) ─
+function isPrivateOrInternalUrl(targetUrl) {
+  try {
+    const parsed = new URL(targetUrl);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return true;
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host === '::1' ||
+      host.startsWith('192.168.') ||
+      host.startsWith('10.') ||
+      host.startsWith('169.254.') ||
+      (host.startsWith('172.') && parseInt(host.split('.')[1], 10) >= 16 && parseInt(host.split('.')[1], 10) <= 31)
+    ) {
+      return true;
+    }
+    return false;
+  } catch (e) {
+    return true;
+  }
+}
 
 // Proxy de télémétrie pour éviter les erreurs CORS navigateur sur send-key-bug
 app.post('/api/send-key-bug', async (req, res) => {
@@ -137,12 +195,12 @@ app.get('/api/proxy', async (req, res) => {
   const videoUrl = req.query.url;
   const referer = req.query.referer || '';
 
-  console.log(`[Proxy] Requête reçue pour : ${videoUrl} (Referer: ${referer}) (Range: ${req.headers.range || 'Aucun'})`);
-
-  if (!videoUrl) {
-    console.log(`[Proxy] Erreur: URL manquante.`);
-    return res.status(400).send('Le paramètre URL est requis.');
+  if (!videoUrl || isPrivateOrInternalUrl(videoUrl)) {
+    console.log(`[Proxy Security] Accès refusé : URL invalide ou interne (${videoUrl}).`);
+    return res.status(403).send('Accès refusé : URL privée ou invalide (Protection Anti-SSRF).');
   }
+
+  console.log(`[Proxy] Requête reçue pour : ${videoUrl} (Referer: ${referer}) (Range: ${req.headers.range || 'Aucun'})`);
 
   // Préparation des headers pour l'hébergeur distant (avec ajustement automatique du Referer pour contourner les 403)
   const headers = {
@@ -223,6 +281,10 @@ app.get('/api/proxy', async (req, res) => {
 app.get('/api/embed-proxy', async (req, res) => {
   const embedUrl = req.query.url;
   const referer = req.query.referer || embedUrl;
+
+  if (!embedUrl || isPrivateOrInternalUrl(embedUrl)) {
+    return res.status(403).send('Accès refusé : URL iframe privée ou invalide (Protection Anti-SSRF).');
+  }
 
   console.log(`[Embed Proxy] Déblocage de l'iframe pour : ${embedUrl}`);
 
