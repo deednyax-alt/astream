@@ -1,5 +1,6 @@
 git/
 git.zip
+node.exe
 node_modules/
 *.log
 .env
