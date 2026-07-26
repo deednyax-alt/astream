@@ -36,7 +36,8 @@
       <button class="nav-btn" data-tab="catalog" data-cat="tv"><i class="fa-solid fa-tv"></i> Séries</button>
       <button class="nav-btn" data-tab="catalog" data-cat="movie"><i class="fa-solid fa-film"></i> Films</button>
       <button class="nav-btn" data-tab="catalog" data-cat="manga"><i class="fa-solid fa-book-open"></i> Mangas</button>
-      <button class="nav-btn" data-tab="catalog" data-cat="live"><i class="fa-solid fa-signal"></i> TV & Sports</button>
+      <button class="nav-btn" data-tab="catalog" data-cat="schedule"><i class="fa-solid fa-calendar-days"></i> Planning</button>
+      <button class="nav-btn" data-tab="catalog" data-cat="history"><i class="fa-solid fa-clock-rotate-left"></i> Historique</button>
       <button class="nav-btn" id="open-suggestion-btn"><i class="fa-solid fa-lightbulb"></i> Suggérer</button>
       <button class="nav-btn" id="open-auth-modal-btn"><i class="fa-solid fa-user-circle"></i> Connexion</button>
       <button class="nav-btn" data-tab="scraper-console" id="admin-nav-btn" style="display:none;background:rgba(139, 92, 246, 0.2);border-color:var(--accent-purple);color:#fff"><i class="fa-solid fa-user-shield"></i> Admin Panel</button>
@@ -172,6 +173,15 @@
           </div>
         </div>
         <div class="anime-grid" id="grid-schedule"></div>
+      </div>
+
+      <!-- ── Section Historique de Visionnage ────────────────── -->
+      <div id="cat-history" class="category-section">
+        <div class="section-title-container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;margin-bottom:20px">
+          <h2 class="section-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent-cyan)"></i> Votre Historique de Visionnage</h2>
+          <button id="clear-history-btn" class="btn btn-secondary btn-sm" style="color:#ef4444;border-color:rgba(239, 68, 68, 0.4)"><i class="fa-solid fa-trash"></i> Effacer tout l'historique</button>
+        </div>
+        <div class="anime-grid" id="grid-history"></div>
       </div>
 
       <!-- ── Barre de Pagination Dynamique par Onglets ── -->

@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupPlayerEvents();
   setupMangaReaderEvents();
   setupSuggestionEvents();
+  setupHistoryEvents();
   setupAuthEvents();
   setupConsole();
   setupServerMonitor();
@@ -467,6 +468,81 @@ function renderScheduleForDay(dayName) {
   renderCards(grid, releases);
 }
 
+// ─── Système d'Historique de Visionnage ────────────────────────
+function addToWatchHistory(item) {
+  if (!item || !item.title) return;
+
+  try {
+    const history = JSON.parse(localStorage.getItem('astream_history') || '[]');
+    const now = new Date();
+    const dateFormatted = `Vu le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+
+    // Supprimer les doublons récents pour le même titre
+    const filtered = history.filter(h => h.title !== item.title || h.season !== item.season || h.episode !== item.episode);
+
+    let displayTitle = item.title;
+    if (item.episode) {
+      displayTitle += ` — ${item.season ? 'S' + item.season + ' ' : ''}Ep. ${item.episode}`;
+    }
+
+    const historyItem = {
+      id: item.id || `hist_${Date.now()}`,
+      title: displayTitle,
+      type: item.type || 'anime',
+      rating: item.rating || 9.0,
+      poster: item.poster || NO_IMAGE_SVG,
+      season: item.season,
+      episode: item.episode,
+      streamUrl: item.streamUrl || item.embedUrl || item.id,
+      dateWatched: dateFormatted,
+      genres: [{ name: `🕒 ${dateFormatted}` }]
+    };
+
+    filtered.unshift(historyItem);
+    // Garder les 50 plus récents
+    localStorage.setItem('astream_history', JSON.stringify(filtered.slice(0, 50)));
+
+    if (currentCat === 'history') loadWatchHistory();
+  } catch (e) {
+    console.warn('[Historique] Erreur enregistrement:', e.message);
+  }
+}
+
+function loadWatchHistory() {
+  const grid = $('grid-history');
+  if (!grid) return;
+
+  try {
+    const history = JSON.parse(localStorage.getItem('astream_history') || '[]');
+    if (history.length === 0) {
+      grid.innerHTML = `
+        <div style="grid-column:1/-1;text-align:center;padding:40px 20px" class="glass">
+          <i class="fa-solid fa-clock-rotate-left" style="font-size:3rem;color:var(--accent-cyan);margin-bottom:15px"></i>
+          <h3 style="color:#fff;margin-bottom:10px">Aucun historique de visionnage</h3>
+          <p style="color:var(--text-muted);font-size:0.9rem">Lisez un anime, une série ou un film pour le retrouver automatiquement ici !</p>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = '';
+    renderCards(grid, history);
+  } catch (e) {
+    grid.innerHTML = `<p style="grid-column:1/-1;color:#ef4444;padding:20px">⚠ Erreur de lecture de l'historique.</p>`;
+  }
+}
+
+function setupHistoryEvents() {
+  const clearBtn = $('clear-history-btn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      if (confirm('Voulez-vous vraiment effacer tout votre historique de visionnage ?')) {
+        localStorage.removeItem('astream_history');
+        loadWatchHistory();
+      }
+    });
+  }
+}
+
 // ─── Chargement d'une catégorie ───────────────────────────────
 async function loadCategory(cat, append = false) {
   const gridId = (cat === 'live') ? 'grid-live-channels' : `grid-${cat}`;
@@ -504,6 +580,11 @@ async function loadCategory(cat, append = false) {
       const todayName = DAYS_FR[new Date().getDay()] || 'dimanche';
       renderScheduleForDay(todayName);
       loaded.schedule = true;
+
+    } else if (cat === 'history') {
+      // Historique de Visionnage
+      loadWatchHistory();
+      loaded.history = true;
 
     } else if (cat === 'live') {
       let usingFallback = false;
@@ -1175,6 +1256,16 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
 
   videoPlayer.style.display = 'block';
   openModal(playerModal);
+
+  addToWatchHistory({
+    id: id || currentAnime?.id,
+    title: currentAnime?.title || playerAnimeTitle.textContent,
+    type: type || currentAnime?.type || 'anime',
+    rating: currentAnime?.rating || 9.0,
+    poster: currentAnime?.poster || NO_IMAGE_SVG,
+    season,
+    episode
+  });
 
   let primaryId = id;
   if (type === 'movie' && currentAnime?.playUrl) {
