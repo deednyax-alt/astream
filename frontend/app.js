@@ -1602,21 +1602,44 @@ function setupConsole() {
     });
   }
 
-  const toggleMaintBtn = $('toggle-maintenance-btn');
-  const maintStatus    = $('maintenance-toggle-status');
+  const toggleMaintBtn          = $('toggle-maintenance-btn');
+  const disableMaintOverlayBtn  = $('disable-maintenance-overlay-btn');
+  const maintStatus             = $('maintenance-toggle-status');
 
-  if (toggleMaintBtn) {
-    toggleMaintBtn.addEventListener('click', async () => {
-      try {
-        const res = await fetch('/api/maintenance/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-        const data = await res.json();
-        if (maintStatus) {
-          maintStatus.style.color = data.maintenance ? '#f59e0b' : '#10b981';
-          maintStatus.textContent = data.maintenance ? '🟡 Mode Maintenance ACTIVÉ' : '🟢 Mode Normal (En ligne)';
-        }
-      } catch (e) {
-        if (maintStatus) maintStatus.textContent = 'Erreur basculement';
+  const toggleMaintenance = async () => {
+    try {
+      const res = await fetch('/api/maintenance/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: false }) });
+      const data = await res.json();
+      const maintOverlay = $('maintenance-overlay');
+      if (maintOverlay) {
+        maintOverlay.style.display = data.maintenance ? 'flex' : 'none';
       }
-    });
-  }
+      if (maintStatus) {
+        maintStatus.style.color = data.maintenance ? '#f59e0b' : '#10b981';
+        maintStatus.textContent = data.maintenance ? '🟡 Mode Maintenance ACTIVÉ' : '🟢 Mode Normal (En ligne)';
+      }
+    } catch (e) {
+      if (maintStatus) maintStatus.textContent = 'Erreur basculement';
+    }
+  };
+
+  const toggleMaintenanceToggle = async () => {
+    try {
+      const res = await fetch('/api/maintenance/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const data = await res.json();
+      const maintOverlay = $('maintenance-overlay');
+      if (maintOverlay) {
+        maintOverlay.style.display = data.maintenance ? 'flex' : 'none';
+      }
+      if (maintStatus) {
+        maintStatus.style.color = data.maintenance ? '#f59e0b' : '#10b981';
+        maintStatus.textContent = data.maintenance ? '🟡 Mode Maintenance ACTIVÉ' : '🟢 Mode Normal (En ligne)';
+      }
+    } catch (e) {
+      if (maintStatus) maintStatus.textContent = 'Erreur basculement';
+    }
+  };
+
+  if (toggleMaintBtn) toggleMaintBtn.addEventListener('click', toggleMaintenanceToggle);
+  if (disableMaintOverlayBtn) disableMaintOverlayBtn.addEventListener('click', toggleMaintenance);
 }
