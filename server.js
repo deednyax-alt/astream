@@ -294,8 +294,10 @@ app.get('/api/proxy', async (req, res) => {
 
   try {
     const targetObj = new URL(videoUrl);
-    if (!targetObj.host.includes('deadcow')) {
-      // Les CDN HLS externes (ex: vmwesa.online) bloquent deadcow avec un 403 ; envoyer leur propre origin
+    if (targetObj.host.includes('deadcow-streaming.lol')) {
+      headers['Referer'] = 'https://deadcow-streaming.lol/';
+      headers['Origin']  = 'https://deadcow-streaming.lol';
+    } else if (!targetObj.host.includes('deadcow')) {
       headers['Referer'] = `https://${targetObj.host}/`;
     } else if (referer) {
       headers['Referer'] = referer;

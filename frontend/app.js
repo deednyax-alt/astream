@@ -1378,44 +1378,36 @@ function buildSourceSelector(data) {
   const tmdbId = currentAnime?.id || currentAnime?.tmdbId || data.id || data.tmdbId;
   const numericTmdb = (tmdbId && /^\d+$/.test(String(tmdbId).trim())) ? String(tmdbId).trim() : null;
 
-  // Nettoyer et normaliser les URLs d'embeds malformées
   const cleanUrl = (u) => {
     if (!u || typeof u !== 'string') return u;
     if (u.includes('vidsrc') && (u.includes('/http') || u.includes('/https'))) {
       if (numericTmdb) {
-        return `https://vidsrc.me/embed/movie?tmdb=${numericTmdb}`;
+        return currentAnime?.type === 'movie' ? `https://vidsrc.me/embed/movie?tmdb=${numericTmdb}` : `https://vidsrc.me/embed/tv?tmdb=${numericTmdb}&season=1&episode=1`;
       }
       return null;
     }
     return u;
   };
 
-  // 1. Placer le flux direct astream en premier s'il est disponible
-  if (data.streamUrl) {
-    const cleanStream = cleanUrl(data.streamUrl);
-    if (cleanStream) {
-      sources.push({ name: '🟢 Lecteur Direct astream (Recommandé)', url: cleanStream });
-    }
-  }
-
-  // 2. Placer l'embed principal s'il est différent du flux direct
-  if (data.embedUrl && data.embedUrl !== data.streamUrl) {
+  // 1. Placer l'embed principal s'il est disponible
+  if (data.embedUrl) {
     const cleanEmbed = cleanUrl(data.embedUrl);
-    if (cleanEmbed && isRealEmbedUrl(cleanEmbed)) {
-      sources.push({ name: '🎬 Lecteur Embed Principal', url: cleanEmbed });
+    if (cleanEmbed) {
+      sources.push({ name: '🎬 Lecteur Principal HD astream', url: cleanEmbed });
     }
   }
 
-  // 3. Ajouter les autres miroir(s) disponibles
+  // 2. Ajouter les miroirs d'embeds (Sibnet, Vidmoly, Franime, VidSrc, etc.)
   if (data.embeds) {
     Object.entries(data.embeds).forEach(([key, url]) => {
       const targetUrl = cleanUrl(url);
-      if (targetUrl && isRealEmbedUrl(targetUrl)) {
+      if (targetUrl) {
         let label = `🎬 Lecteur ${key.toUpperCase()}`;
         if (targetUrl.includes('sibnet')) label = '⚡ Lecteur Sibnet (Ultra Rapide)';
         else if (targetUrl.includes('vidmoly')) label = '🎬 Lecteur Vidmoly (HD)';
         else if (targetUrl.includes('vidoza')) label = '▶ Lecteur Vidoza (HD)';
-        else if (targetUrl.includes('vidsrc')) label = '🎬 Lecteur Film HD (VidSrc)';
+        else if (targetUrl.includes('vidsrc')) label = '🎬 Lecteur Film & Séries HD (VidSrc)';
+        else if (targetUrl.includes('franime')) label = '🟢 Lecteur Direct Franime HD';
         if (!sources.some(s => s.url === targetUrl)) {
           sources.push({ name: label, url: targetUrl });
         }
@@ -1423,17 +1415,26 @@ function buildSourceSelector(data) {
     });
   }
 
-  // 4. Option alternative secondaire VidSrc pour les films si besoin
-  if (numericTmdb && currentAnime?.type === 'movie') {
-    const vidsrcUrl = `https://vidsrc.me/embed/movie?tmdb=${numericTmdb}`;
-    if (!sources.some(s => s.url === vidsrcUrl)) {
-      sources.push({ name: '🎬 Lecteur Film HD (VidSrc)', url: vidsrcUrl });
+  // 3. Ajouter le flux direct MP4/HLS s'il n'est pas un token media-proxy expiré
+  if (data.streamUrl && !data.streamUrl.includes('media-proxy')) {
+    const cleanStream = cleanUrl(data.streamUrl);
+    if (cleanStream && !sources.some(s => s.url === cleanStream)) {
+      sources.push({ name: '🟢 Lecteur Direct MP4 / HLS', url: cleanStream });
     }
   }
 
-  if (sources.length === 0 && data.embedUrl) {
-    const cleanEmbed = cleanUrl(data.embedUrl);
-    if (cleanEmbed) sources.push({ name: '🟢 Lecteur Direct astream', url: cleanEmbed });
+  // 4. Source alternative TMDB VidSrc pour Films et Séries
+  if (numericTmdb) {
+    const vidsrcUrl = currentAnime?.type === 'movie'
+      ? `https://vidsrc.me/embed/movie?tmdb=${numericTmdb}`
+      : `https://vidsrc.me/embed/tv?tmdb=${numericTmdb}&season=1&episode=1`;
+    if (!sources.some(s => s.url === vidsrcUrl)) {
+      sources.push({ name: '🎬 Lecteur Secours HD (VidSrc)', url: vidsrcUrl });
+    }
+  }
+
+  if (sources.length === 0 && data.streamUrl) {
+    sources.push({ name: '🟢 Lecteur Direct astream', url: data.streamUrl });
   }
 
   sources.forEach((src, idx) => {
@@ -1453,14 +1454,13 @@ function buildSourceSelector(data) {
 function isRealEmbedUrl(url) {
   if (!url || typeof url !== 'string') return false;
 
-  // 1. Les flux MP4/HLS/Media-Proxy directs ne sont PAS des embeds iframe !
   const clean = url.split('?')[0].toLowerCase();
   if (clean.endsWith('.mp4') || clean.endsWith('.m3u8') || clean.endsWith('.ts')) return false;
   if (url.includes('/api/media-proxy') || url.includes('/api/hls-proxy')) return false;
 
-  // 2. Hébergeurs avec pages d'embeds iframe
-  const validEmbedHosts = ['sibnet.ru', 'vidmoly', 'vidoza', 'myvi', 'streamtape', 'sendvid', 'dood', 'filemoon', 'vidzy', 'multiup', 'franime', 'vidsrc'];
-  return validEmbedHosts.some(host => url.toLowerCase().includes(host));
+  // Si c'est une URL Web HTTP/HTTPS sans extension vidéo brute direct, c'est un embed HTML !
+  if (url.startsWith('http://') || url.startsWith('https://')) return true;
+  return false;
 }
 
 // ─── Lancement du Stream (HLS / MP4 / Iframe) ─────────────────
@@ -1534,7 +1534,7 @@ function playStream(url) {
       const isExpired = data.response && (data.response.code === 403 || data.response.code === 404);
       if (data.fatal || isExpired) {
         if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
-        console.warn('[HLS] Erreur flux HLS (403/404), basculement vers une source disponible...');
+        console.warn('[HLS] Erreur flux HLS, basculement vers le miroir Embed...');
         const sources = streamSourceSelect?._sources || [];
         const fallback = sources.find(s => s.url !== url && isRealEmbedUrl(s.url));
         if (fallback) {
