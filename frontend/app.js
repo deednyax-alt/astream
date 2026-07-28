@@ -1577,8 +1577,14 @@ async function playStream(url) {
   if (window.Hls && Hls.isSupported() && isHlsManifest) {
     let streamUrl = url;
     if (!url.startsWith('/api/proxy') && !url.startsWith(window.location.origin + '/api/proxy')) {
-      const targetUrl = url.startsWith('/') ? `https://deadcow-streaming.lol${url}` : url;
-      streamUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}&referer=${encodeURIComponent('https://deadcow-streaming.lol/')}`;
+      let normTarget = url;
+      if (normTarget.includes('/api/hls-proxy') || normTarget.includes('/api/media-proxy')) {
+        normTarget = normTarget.replace(/^https?:\/\/[^\/]+/, 'https://deadcow-streaming.lol');
+        if (normTarget.startsWith('/')) normTarget = `https://deadcow-streaming.lol${normTarget}`;
+      } else if (normTarget.startsWith('/')) {
+        normTarget = `https://deadcow-streaming.lol${normTarget}`;
+      }
+      streamUrl = `/api/proxy?url=${encodeURIComponent(normTarget)}&referer=${encodeURIComponent('https://deadcow-streaming.lol/')}`;
     }
 
     hlsInstance = new Hls({
@@ -1587,15 +1593,21 @@ async function playStream(url) {
       backBufferLength: 90,
       xhrSetup: function(xhr, xhrUrl) {
         let realTarget = xhrUrl;
-        if (realTarget.startsWith('/api/proxy') || realTarget.startsWith(window.location.origin + '/api/proxy')) {
+        if (realTarget.includes('/api/proxy?')) {
           return;
         }
-        if (realTarget.startsWith('/')) {
+
+        if (realTarget.includes('/api/hls-proxy') || realTarget.includes('/api/media-proxy')) {
+          realTarget = realTarget.replace(/^https?:\/\/[^\/]+/, 'https://deadcow-streaming.lol');
+          if (realTarget.startsWith('/')) realTarget = `https://deadcow-streaming.lol${realTarget}`;
+        } else if (realTarget.startsWith('/')) {
           realTarget = `https://deadcow-streaming.lol${realTarget}`;
         } else if (!realTarget.startsWith('http://') && !realTarget.startsWith('https://')) {
           realTarget = `https://deadcow-streaming.lol/${realTarget}`;
         }
-        xhr.open('GET', `/api/proxy?url=${encodeURIComponent(realTarget)}&referer=${encodeURIComponent('https://deadcow-streaming.lol/')}`, true);
+
+        const proxied = `/api/proxy?url=${encodeURIComponent(realTarget)}&referer=${encodeURIComponent('https://deadcow-streaming.lol/')}`;
+        xhr.open('GET', proxied, true);
       }
     });
 
