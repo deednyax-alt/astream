@@ -1267,46 +1267,70 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
   if (type === 'movie' && currentAnime?.playUrl) {
     primaryId = currentAnime.playUrl;
   }
-  if (typeof primaryId === 'string' && primaryId.includes('anime-sama.to') && !primaryId.endsWith('/')) {
-    primaryId = primaryId + '/';
+
+  // Extraire le slug relatif pour les URLs d'animes (ex: https://anime-sama.to/catalogue/one-piece/ -> one-piece)
+  let cleanSlug = primaryId;
+  if (typeof cleanSlug === 'string' && cleanSlug.includes('http')) {
+    cleanSlug = cleanSlug.replace(/^https?:\/\/[^\/]+\/catalogue\//, '').replace(/^https?:\/\/[^\/]+\//, '').replace(/\/+$/, '').trim();
   }
 
-  const attemptFetch = async (targetId, v, s, timeoutMs = 20000) => {
-    const params = { id: targetId, type, episode, version: v };
+  const attemptFetch = async (targetId, v, s, tType = type, timeoutMs = 20000) => {
+    if (!targetId) throw new Error('ID cible invalide.');
+    const params = { id: targetId, type: tType, episode, version: v };
     if (s !== undefined && s !== null) params.season = s;
-    return await dcFetch('/resolve', params, { retries: 0, timeout: timeoutMs });
+    const res = await dcFetch('/resolve', params, { retries: 0, timeout: timeoutMs });
+    const stream = res?.streamUrl || res?.embedUrl || '';
+    if (!res || !res.success || !stream || stream.includes('vidsrc.to/embed/movie/https:') || (tType === 'tv' && stream.includes('vidsrc.to/embed/tv/') && !res.streamUrl)) {
+      throw new Error(res?.error || 'Flux indisponible pour ces paramètres.');
+    }
+    return res;
   };
 
   try {
     let data = null;
 
-    // Fast-path 1 : Résolution parallèle immédiate (VF et VOSTFR simultanés)
-    try {
-      data = await Promise.any([
-        attemptFetch(primaryId, currentVersion, undefined, 20000),
-        attemptFetch(primaryId, currentVersion === 'vf' ? 'vostfr' : 'vf', undefined, 20000),
-        ...(season !== undefined ? [attemptFetch(primaryId, currentVersion, season, 20000)] : [])
-      ]);
-    } catch (eFast) {}
+    // Fast-path 1 : Résolution parallèle priorisant le slug relatif propre, l'URL Anime-Sama et le slug issu du titre
+    const titleClean = (currentAnime?.title || primaryId || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const slugFromTitle = titleClean.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-    // Fast-path 2 : Si la résolution parallèle n'a rien renvoyé, essayer avec le slug relatif
-    if ((!data || !data.success || !data.streamUrl) && typeof primaryId === 'string' && primaryId.startsWith('http')) {
-      const relativeSlug = primaryId.replace(/^https?:\/\/[^\/]+\//, '');
-      if (relativeSlug && relativeSlug !== primaryId) {
-        try {
-          if (loaderText) loaderText.textContent = "Recherche via identifiant alternatif...";
-          const relData = await Promise.any([
-            attemptFetch(relativeSlug, currentVersion, undefined, 20000),
-            attemptFetch(relativeSlug, currentVersion === 'vf' ? 'vostfr' : 'vf', undefined, 20000)
-          ]);
-          if (relData && relData.success && (relData.streamUrl || relData.embedUrl)) data = relData;
-        } catch (eRel) {}
-      }
+    const targetIds = [cleanSlug];
+    if (slugFromTitle && !targetIds.includes(slugFromTitle)) targetIds.push(slugFromTitle);
+    if (slugFromTitle && !targetIds.includes(`https://anime-sama.to/catalogue/${slugFromTitle}`)) {
+      targetIds.push(`https://anime-sama.to/catalogue/${slugFromTitle}`);
     }
 
-    // Fast-path 3 : Si le film n'a toujours pas de flux direct (ex: Backrooms (2026)), chercher par titre TMDB ID
-    if ((!data || !data.success || !data.streamUrl) && (currentAnime?.title || typeof primaryId === 'string')) {
-      let rawTitle = currentAnime?.title || primaryId;
+    if (titleClean.includes('foot 2 rue') || titleClean.includes('foot2rue') || cleanSlug.includes('foot-2-rue')) {
+      targetIds.push('https://anime-sama.to/catalogue/foot-2-rue');
+      targetIds.push('foot-2-rue');
+      targetIds.push('foot-2-rue-extreme');
+      targetIds.push('https://anime-sama.to/catalogue/foot-2-rue-extreme');
+    }
+    if (cleanSlug !== primaryId && !targetIds.includes(primaryId)) targetIds.push(primaryId);
+
+    const typesToTry = [type];
+    if (type !== 'anime') typesToTry.push('anime');
+
+    const candidatePromises = [];
+    targetIds.forEach(tId => {
+      typesToTry.forEach(tType => {
+        if (season !== undefined && season !== null) {
+          candidatePromises.push(attemptFetch(tId, currentVersion, season, tType, 20000));
+          candidatePromises.push(attemptFetch(tId, currentVersion === 'vf' ? 'vostfr' : 'vf', season, tType, 20000));
+          candidatePromises.push(attemptFetch(tId, currentVersion, `saison${season}`, tType, 20000));
+          candidatePromises.push(attemptFetch(tId, currentVersion === 'vf' ? 'vostfr' : 'vf', `saison${season}`, tType, 20000));
+        }
+        candidatePromises.push(attemptFetch(tId, currentVersion, undefined, tType, 20000));
+        candidatePromises.push(attemptFetch(tId, currentVersion === 'vf' ? 'vostfr' : 'vf', undefined, tType, 20000));
+      });
+    });
+
+    try {
+      data = await Promise.any(candidatePromises);
+    } catch (eFast) {}
+
+    // Fast-path 2 : Recherche de secours via Titre TMDB si nécessaire
+    if ((!data || !data.success || (!data.streamUrl && !data.embedUrl)) && (currentAnime?.title || typeof primaryId === 'string')) {
+      let rawTitle = currentAnime?.title || cleanSlug;
       if (typeof rawTitle === 'string') {
         rawTitle = rawTitle.replace(/^.*\/film\//, '').replace(/%20/g, ' ').replace(/\s*\(\d{4}\)/, '').trim();
       }
@@ -1317,7 +1341,11 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
           const tmdbMatch = sRes?.results?.find(r => r.id && /^\d+$/.test(String(r.id)));
           if (tmdbMatch && tmdbMatch.id) {
             console.log(`[Smart Resolve] Basculement vers TMDB ID ${tmdbMatch.id} pour "${rawTitle}"`);
-            const tmdbData = await attemptFetch(tmdbMatch.id, currentVersion, undefined, 20000);
+            const tmdbData = await Promise.any([
+              attemptFetch(tmdbMatch.id, currentVersion, season, type, 20000),
+              attemptFetch(tmdbMatch.id, currentVersion === 'vf' ? 'vostfr' : 'vf', season, type, 20000),
+              attemptFetch(tmdbMatch.id, currentVersion, undefined, type, 20000)
+            ]);
             if (tmdbData && tmdbData.success && (tmdbData.streamUrl || tmdbData.embedUrl)) {
               data = tmdbData;
             }
@@ -1462,7 +1490,7 @@ function isRealEmbedUrl(url) {
 // ─── Lancement du Stream (HLS / MP4 / Iframe) ─────────────────
 let hlsInstance = null;
 
-function playStream(url) {
+async function playStream(url) {
   const video = videoPlayer;
   const iframe = $('premium-iframe-player');
 
@@ -1474,14 +1502,40 @@ function playStream(url) {
   if (!window._triedSources) window._triedSources = new Set();
   window._triedSources.add(url);
 
+  let targetUrl = url;
   const isEmbed = isRealEmbedUrl(url);
 
-  if (isEmbed) {
+  // Essayer de résoudre automatiquement les URLs Embed vers le Lecteur HTML5 Principal
+  if (isEmbed && !url.startsWith('/api/') && !window._resolvedUrls?.has(url)) {
+    if (!window._resolvedUrls) window._resolvedUrls = new Map();
+    try {
+      if (videoLoader) {
+        videoLoader.classList.add('active');
+        const loaderText = videoLoader.querySelector('p');
+        if (loaderText) loaderText.textContent = "Chargement du flux direct dans le Lecteur Principal...";
+      }
+      const res = await fetch(`/api/resolve-embed?url=${encodeURIComponent(url)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.videoUrl) {
+          console.log(`[Embed Resolver] Flux extrait vers le Lecteur Principal : ${data.videoUrl}`);
+          window._resolvedUrls.set(url, data.videoUrl);
+          targetUrl = data.videoUrl;
+        }
+      }
+    } catch(e) {}
+  } else if (window._resolvedUrls?.has(url)) {
+    targetUrl = window._resolvedUrls.get(url);
+  }
+
+  const finalIsEmbed = isRealEmbedUrl(targetUrl);
+
+  if (finalIsEmbed) {
     video.pause();
     video.style.display = 'none';
     if (iframe) {
       iframe.style.display = 'block';
-      const proxiedEmbed = url.startsWith('/api/') ? url : `/api/embed-proxy?url=${encodeURIComponent(url)}`;
+      const proxiedEmbed = targetUrl.startsWith('/api/') ? targetUrl : `/api/embed-proxy?url=${encodeURIComponent(targetUrl)}`;
       iframe.src = proxiedEmbed;
     }
     videoLoader.classList.remove('active');
@@ -1495,11 +1549,12 @@ function playStream(url) {
   }
   video.style.display = 'block';
 
-  const isHlsManifest = url.includes('.m3u8') || url.includes('hls-proxy') || url.includes('hls');
+  const isHlsManifest = targetUrl.includes('.m3u8') || targetUrl.includes('hls-proxy') || targetUrl.includes('hls');
+  url = targetUrl;
 
   if (window.Hls && Hls.isSupported() && isHlsManifest) {
     let streamUrl = url;
-    if (!url.includes('/api/proxy') && !url.includes('/api/hls-proxy') && !url.includes('/api/media-proxy')) {
+    if (!url.startsWith('/api/proxy') && !url.startsWith(window.location.origin + '/api/proxy')) {
       const targetUrl = url.startsWith('/') ? `https://deadcow-streaming.lol${url}` : url;
       streamUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}&referer=${encodeURIComponent('https://deadcow-streaming.lol/')}`;
     }
@@ -1510,13 +1565,15 @@ function playStream(url) {
       backBufferLength: 90,
       xhrSetup: function(xhr, xhrUrl) {
         let realTarget = xhrUrl;
-        if (realTarget.includes('localhost:') || realTarget.startsWith('/')) {
-          realTarget = realTarget.replace(/^https?:\/\/[^\/]+/, 'https://deadcow-streaming.lol');
-          if (realTarget.startsWith('/')) realTarget = `https://deadcow-streaming.lol${realTarget}`;
+        if (realTarget.startsWith('/api/proxy') || realTarget.startsWith(window.location.origin + '/api/proxy')) {
+          return;
         }
-        if (!realTarget.includes('/api/proxy') && !realTarget.includes('/api/hls-proxy') && !realTarget.includes('/api/media-proxy')) {
-          xhr.open('GET', `/api/proxy?url=${encodeURIComponent(realTarget)}&referer=${encodeURIComponent('https://deadcow-streaming.lol/')}`, true);
+        if (realTarget.startsWith('/')) {
+          realTarget = `https://deadcow-streaming.lol${realTarget}`;
+        } else if (!realTarget.startsWith('http://') && !realTarget.startsWith('https://')) {
+          realTarget = `https://deadcow-streaming.lol/${realTarget}`;
         }
+        xhr.open('GET', `/api/proxy?url=${encodeURIComponent(realTarget)}&referer=${encodeURIComponent('https://deadcow-streaming.lol/')}`, true);
       }
     });
 
@@ -1995,3 +2052,327 @@ function setupConsole() {
 
   renderAdminSuggestions();
 }
+
+// ════════════════════════════════════════════════════════════════
+//   WATCH PARTY TEMPS-RÉEL (SYNCHRONISATION VIDÉO & TCHAT EN DIRECT)
+// ════════════════════════════════════════════════════════════════
+let currentWatchParty = null;
+let watchPartyEventSource = null;
+let isSyncingPlayback = false;
+
+// Helper pour les appels API locaux (Watch Party, Auth, Suggestions)
+async function localFetch(url, data = {}) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return await r.json();
+}
+
+function setupWatchParty() {
+  const openModalBtn = $('open-watchparty-modal-btn');
+  const wpModal = $('watchparty-modal');
+  const closeWpBtn = $('close-watchparty-btn');
+  const tabCreate = $('wp-tab-create');
+  const tabJoin = $('wp-tab-join');
+  const formCreate = $('wp-form-create');
+  const formJoin = $('wp-form-join');
+  const btnCreate = $('wp-btn-create-submit');
+  const btnJoin = $('wp-btn-join-submit');
+  const statusMsg = $('wp-status-msg');
+
+  const toggleSidebarBtn = $('toggle-watchparty-sidebar-btn');
+  const mainLayout = document.querySelector('.player-main-layout');
+
+  const copyLinkBtn = $('wp-copy-link-btn');
+  const chatInput = $('wp-chat-input');
+  const sendChatBtn = $('wp-send-chat-btn');
+
+  if (openModalBtn) openModalBtn.onclick = () => openModal(wpModal);
+  if (closeWpBtn) closeWpBtn.onclick = () => closeModal(wpModal);
+
+  if (tabCreate && tabJoin) {
+    tabCreate.onclick = () => {
+      tabCreate.classList.add('active');
+      tabJoin.classList.remove('active');
+      formCreate.style.display = 'block';
+      formJoin.style.display = 'none';
+    };
+    tabJoin.onclick = () => {
+      tabJoin.classList.add('active');
+      tabCreate.classList.remove('active');
+      formJoin.style.display = 'block';
+      formCreate.style.display = 'none';
+    };
+  }
+
+  if (toggleSidebarBtn) {
+    toggleSidebarBtn.onclick = () => {
+      if (mainLayout) mainLayout.classList.toggle('has-sidebar');
+    };
+  }
+
+  if (btnCreate) {
+    btnCreate.onclick = async () => {
+      const username = $('wp-create-username').value.trim() || 'Hôte';
+      statusMsg.innerHTML = '<span style="color:var(--accent-cyan)">Création de la Watch Party…</span>';
+
+      try {
+        const res = await localFetch('/api/watchparty/create', { username, media: currentAnime });
+
+        if (res && res.success) {
+          currentWatchParty = {
+            code: res.roomCode,
+            userId: res.userId,
+            isHost: true,
+            username
+          };
+
+          initRoomState(res.room);
+          connectWatchPartySSE(res.roomCode);
+          closeModal(wpModal);
+          alert(`🍿 Watch Party ${res.roomCode} créée ! Partagez le code ou le lien avec vos amis.`);
+
+          if (mainLayout) mainLayout.classList.add('has-sidebar');
+        } else {
+          statusMsg.innerHTML = `<span style="color:#ef4444">Erreur : ${res.error || 'Impossible de créer la salle.'}</span>`;
+        }
+      } catch (err) {
+        statusMsg.innerHTML = `<span style="color:#ef4444">Erreur : ${err.message}</span>`;
+      }
+    };
+  }
+
+  if (btnJoin) {
+    btnJoin.onclick = async () => {
+      const code = $('wp-join-code').value.trim().toUpperCase();
+      const username = $('wp-join-username').value.trim() || 'Spectateur';
+
+      if (!code) return alert('Veuillez entrer le code de la salle (ex: WP-1234).');
+      statusMsg.innerHTML = '<span style="color:var(--accent-cyan)">Connexion à la Watch Party…</span>';
+
+      try {
+        const res = await localFetch('/api/watchparty/join', { code, username });
+
+        if (res && res.success) {
+          currentWatchParty = {
+            code: res.roomCode,
+            userId: res.userId,
+            isHost: false,
+            username
+          };
+
+          initRoomState(res.room);
+          connectWatchPartySSE(res.roomCode);
+          closeModal(wpModal);
+
+          if (mainLayout) mainLayout.classList.add('has-sidebar');
+
+          if (res.room.media) {
+            resolveAndPlay(res.room.media);
+          }
+        } else {
+          statusMsg.innerHTML = `<span style="color:#ef4444">${res.error || 'Code invalide.'}</span>`;
+        }
+      } catch (err) {
+        statusMsg.innerHTML = `<span style="color:#ef4444">Erreur : ${err.message}</span>`;
+      }
+    };
+  }
+
+  if (copyLinkBtn) {
+    copyLinkBtn.onclick = () => {
+      if (!currentWatchParty) return;
+      const link = `${window.location.origin}${window.location.pathname}?room=${currentWatchParty.code}`;
+      navigator.clipboard.writeText(link).then(() => {
+        alert(`📋 Lien d'invitation copié dans le presse-papier !\n${link}`);
+      });
+    };
+  }
+
+  const handleSendChat = async () => {
+    const text = chatInput.value.trim();
+    if (!text || !currentWatchParty) return;
+    chatInput.value = '';
+
+    try {
+      await localFetch('/api/watchparty/chat', {
+        code: currentWatchParty.code,
+        userId: currentWatchParty.userId,
+        username: currentWatchParty.username,
+        text
+      });
+    } catch(e) {}
+  };
+
+  if (sendChatBtn) sendChatBtn.onclick = handleSendChat;
+  if (chatInput) {
+    chatInput.onkeydown = e => { if (e.key === 'Enter') handleSendChat(); };
+  }
+
+  document.querySelectorAll('.wp-emoji-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const emoji = btn.dataset.emoji;
+      if (!emoji || !currentWatchParty) return;
+      try {
+        await localFetch('/api/watchparty/chat', {
+          code: currentWatchParty.code,
+          userId: currentWatchParty.userId,
+          username: currentWatchParty.username,
+          emoji
+        });
+      } catch(e) {}
+    };
+  });
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const roomParam = urlParams.get('room');
+  if (roomParam && wpModal) {
+    openModal(wpModal);
+    if (tabJoin) tabJoin.click();
+    const joinCodeInput = $('wp-join-code');
+    if (joinCodeInput) joinCodeInput.value = roomParam.trim().toUpperCase();
+  }
+}
+
+function initRoomState(room) {
+  if (!room) return;
+  const codeDisp = $('wp-room-code-display');
+  const roleDisp = $('wp-role-badge');
+  const membersCount = $('wp-members-count');
+  const memberBadge = $('wp-member-badge');
+  const avatars = $('wp-members-avatars');
+
+  if (codeDisp) codeDisp.textContent = room.code;
+  if (roleDisp) {
+    roleDisp.textContent = currentWatchParty.isHost ? '👑 Hôte' : '👁 Spectateur';
+    roleDisp.className = currentWatchParty.isHost ? 'wp-badge-host' : 'wp-badge-viewer';
+  }
+
+  if (membersCount) membersCount.textContent = room.members ? room.members.length : 1;
+  if (memberBadge)  memberBadge.textContent  = room.members ? room.members.length : 1;
+
+  if (avatars && room.members) {
+    avatars.innerHTML = room.members.map(m => `
+      <span class="wp-member-pill" title="${m.username}">
+        <i class="fa-solid ${m.isHost ? 'fa-crown' : 'fa-user'}" style="color:${m.isHost ? '#f59e0b' : 'var(--accent-cyan)'}"></i>
+        ${m.username}
+      </span>
+    `).join('');
+  }
+
+  if (room.messages) {
+    const chatContainer = $('wp-chat-messages');
+    if (chatContainer) {
+      chatContainer.innerHTML = room.messages.map(m => renderChatMessage(m)).join('');
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  }
+}
+
+function renderChatMessage(m) {
+  if (m.isSystem) {
+    return `<div class="wp-sys-msg">${m.text}</div>`;
+  }
+  const isOwn = currentWatchParty && m.userId === currentWatchParty.userId;
+  if (m.emoji) {
+    return `<div class="wp-msg ${isOwn ? 'wp-msg-own' : ''}"><strong>${m.username}</strong> : <span style="font-size:1.4rem">${m.emoji}</span></div>`;
+  }
+  return `<div class="wp-msg ${isOwn ? 'wp-msg-own' : ''}"><strong>${m.username}</strong> : ${escapeHtml(m.text)}</div>`;
+}
+
+function escapeHtml(str) {
+  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function connectWatchPartySSE(code) {
+  if (watchPartyEventSource) {
+    watchPartyEventSource.close();
+  }
+
+  watchPartyEventSource = new EventSource(`/api/watchparty/events/${code}`);
+
+  watchPartyEventSource.addEventListener('INIT', e => {
+    const data = JSON.parse(e.data);
+    if (data.room) initRoomState(data.room);
+  });
+
+  watchPartyEventSource.addEventListener('ROOM_UPDATE', e => {
+    const data = JSON.parse(e.data);
+    if (data.room) initRoomState(data.room);
+  });
+
+  watchPartyEventSource.addEventListener('CHAT_MESSAGE', e => {
+    const data = JSON.parse(e.data);
+    if (data.message) {
+      const chatContainer = $('wp-chat-messages');
+      if (chatContainer) {
+        chatContainer.insertAdjacentHTML('beforeend', renderChatMessage(data.message));
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+      if (data.message.emoji) {
+        triggerFloatingEmoji(data.message.emoji);
+      }
+    }
+  });
+
+  watchPartyEventSource.addEventListener('PLAYBACK_SYNC', e => {
+    const data = JSON.parse(e.data);
+    if (!currentWatchParty || data.senderId === currentWatchParty.userId) return;
+
+    const video = $('premium-video-player');
+    if (!video) return;
+
+    isSyncingPlayback = true;
+
+    if (typeof data.currentTime === 'number' && Math.abs(video.currentTime - data.currentTime) > 1.5) {
+      video.currentTime = data.currentTime;
+    }
+
+    if (data.isPlaying && video.paused) {
+      video.play().catch(() => {});
+    } else if (!data.isPlaying && !video.paused) {
+      video.pause();
+    }
+
+    setTimeout(() => { isSyncingPlayback = false; }, 300);
+  });
+}
+
+function triggerFloatingEmoji(emoji) {
+  const overlay = $('wp-emoji-overlay');
+  if (!overlay) return;
+  const el = document.createElement('div');
+  el.className = 'floating-emoji';
+  el.textContent = emoji;
+  el.style.left = `${Math.floor(20 + Math.random() * 60)}%`;
+  overlay.appendChild(el);
+  setTimeout(() => el.remove(), 2500);
+}
+
+function setupHostVideoSync() {
+  const video = $('premium-video-player');
+  if (!video) return;
+
+  const broadcastSync = (action) => {
+    if (!currentWatchParty || !currentWatchParty.isHost || isSyncingPlayback) return;
+    localFetch('/api/watchparty/sync', {
+      code: currentWatchParty.code,
+      userId: currentWatchParty.userId,
+      action,
+      currentTime: video.currentTime,
+      isPlaying: !video.paused
+    }).catch(() => {});
+  };
+
+  video.addEventListener('play', () => broadcastSync('play'));
+  video.addEventListener('pause', () => broadcastSync('pause'));
+  video.addEventListener('seeked', () => broadcastSync('seek'));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupWatchParty();
+  setupHostVideoSync();
+});
+

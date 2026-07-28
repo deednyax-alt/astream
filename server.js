@@ -143,6 +143,156 @@ app.get('/api/maintenance/status', (req, res) => {
   res.json({ maintenance: isMaintenanceMode, message: maintenanceMessage });
 });
 
+// ─── Watch Party Real-Time Backend ───────────────────────────
+const watchPartyRooms = new Map();
+
+function generateRoomCode() {
+  const num = Math.floor(1000 + Math.random() * 9000);
+  return `WP-${num}`;
+}
+
+function broadcastToRoom(roomCode, eventType, data) {
+  const room = watchPartyRooms.get(roomCode);
+  if (!room || !room.listeners) return;
+  const payload = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
+  room.listeners.forEach(res => {
+    try { res.write(payload); } catch(e) {}
+  });
+}
+
+function getSanitizedRoom(room) {
+  return {
+    code: room.code,
+    hostId: room.hostId,
+    hostName: room.hostName,
+    media: room.media,
+    currentTime: room.currentTime,
+    isPlaying: room.isPlaying,
+    members: room.members,
+    messages: room.messages
+  };
+}
+
+// 1. Créer une Watch Party
+app.post('/api/watchparty/create', (req, res) => {
+  const { username, media } = req.body || {};
+  const code = generateRoomCode();
+  const userId = `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+  const room = {
+    code,
+    hostId: userId,
+    hostName: username || 'Hôte',
+    media: media || null,
+    currentTime: 0,
+    isPlaying: false,
+    members: [{ id: userId, username: username || 'Hôte', isHost: true, joinedAt: new Date().toISOString() }],
+    messages: [{ id: `msg_${Date.now()}`, username: 'Système', text: `La Watch Party ${code} a été créée par ${username || 'Hôte'}.`, timestamp: Date.now(), isSystem: true }],
+    listeners: new Set(),
+    createdAt: Date.now(),
+    lastActivity: Date.now()
+  };
+
+  watchPartyRooms.set(code, room);
+  console.log(`[WatchParty] Salle créée : ${code} par ${username || 'Hôte'}`);
+  res.json({ success: true, roomCode: code, userId, isHost: true, room: getSanitizedRoom(room) });
+});
+
+// 2. Rejoindre une Watch Party
+app.post('/api/watchparty/join', (req, res) => {
+  const { code, username } = req.body || {};
+  const cleanCode = (code || '').trim().toUpperCase();
+  const room = watchPartyRooms.get(cleanCode);
+
+  if (!room) {
+    return res.status(404).json({ success: false, error: 'Watch Party introuvable. Vérifiez le code de la salle.' });
+  }
+
+  const userId = `user_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+  const memberName = username || `Spectateur #${room.members.length + 1}`;
+  const member = { id: userId, username: memberName, isHost: false, joinedAt: new Date().toISOString() };
+  room.members.push(member);
+  room.lastActivity = Date.now();
+
+  const sysMsg = { id: `msg_${Date.now()}`, username: 'Système', text: `🍿 ${memberName} a rejoint la Watch Party !`, timestamp: Date.now(), isSystem: true };
+  room.messages.push(sysMsg);
+
+  broadcastToRoom(cleanCode, 'ROOM_UPDATE', { room: getSanitizedRoom(room), newMember: member, sysMsg });
+
+  res.json({ success: true, roomCode: cleanCode, userId, isHost: false, room: getSanitizedRoom(room) });
+});
+
+// 3. Stream SSE Temps-Réel (<30ms) pour les événements de salle
+app.get('/api/watchparty/events/:code', (req, res) => {
+  const roomCode = req.params.code.trim().toUpperCase();
+  const room = watchPartyRooms.get(roomCode);
+
+  if (!room) {
+    return res.status(404).send('Salle introuvable.');
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
+  room.listeners.add(res);
+
+  res.write(`event: INIT\ndata: ${JSON.stringify({ room: getSanitizedRoom(room) })}\n\n`);
+
+  req.on('close', () => {
+    room.listeners.delete(res);
+  });
+});
+
+// 4. Synchroniser la lecture (Play / Pause / Seek / Media)
+app.post('/api/watchparty/sync', (req, res) => {
+  const { code, userId, action, currentTime, isPlaying, media } = req.body || {};
+  const room = watchPartyRooms.get((code || '').trim().toUpperCase());
+
+  if (!room) return res.status(404).json({ success: false, error: 'Salle introuvable.' });
+
+  if (typeof currentTime === 'number') room.currentTime = currentTime;
+  if (typeof isPlaying === 'boolean') room.isPlaying = isPlaying;
+  if (media) room.media = media;
+  room.lastActivity = Date.now();
+
+  broadcastToRoom(room.code, 'PLAYBACK_SYNC', {
+    action,
+    currentTime: room.currentTime,
+    isPlaying: room.isPlaying,
+    media: room.media,
+    senderId: userId
+  });
+
+  res.json({ success: true });
+});
+
+// 5. Envoyer un message de Tchat ou Réaction Emoji
+app.post('/api/watchparty/chat', (req, res) => {
+  const { code, userId, username, text, emoji } = req.body || {};
+  const room = watchPartyRooms.get((code || '').trim().toUpperCase());
+
+  if (!room) return res.status(404).json({ success: false, error: 'Salle introuvable.' });
+
+  const msg = {
+    id: `msg_${Date.now()}`,
+    userId,
+    username: username || 'Anonyme',
+    text: text || '',
+    emoji: emoji || null,
+    timestamp: Date.now()
+  };
+
+  room.messages.push(msg);
+  if (room.messages.length > 100) room.messages.shift();
+  room.lastActivity = Date.now();
+
+  broadcastToRoom(room.code, 'CHAT_MESSAGE', { message: msg });
+
+  res.json({ success: true, message: msg });
+});
+
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'astream2026';
 
 // ─── Base de Données des Comptes Utilisateurs (Authentification & Rôles) ───
@@ -305,8 +455,20 @@ app.get('/api/animes', (req, res) => {
 
 // Proxy Vidéo Premium avec support complet des requêtes partielles (HTTP Range 206) pour PC & iOS (iPhone)
 app.get('/api/proxy', async (req, res) => {
-  const videoUrl = req.query.url;
+  let videoUrl = req.query.url;
   const referer = req.query.referer || '';
+
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (videoUrl && videoUrl.startsWith('http://')) {
+    videoUrl = videoUrl.replace('http://', 'https://');
+  }
 
   if (!videoUrl || isPrivateOrInternalUrl(videoUrl)) {
     console.log(`[Proxy Security] Accès refusé : URL invalide ou interne (${videoUrl}).`);
@@ -325,10 +487,10 @@ app.get('/api/proxy', async (req, res) => {
     if (targetObj.host.includes('deadcow-streaming.lol')) {
       headers['Referer'] = 'https://deadcow-streaming.lol/';
       headers['Origin']  = 'https://deadcow-streaming.lol';
-    } else if (!targetObj.host.includes('deadcow')) {
-      headers['Referer'] = `https://${targetObj.host}/`;
     } else if (referer) {
       headers['Referer'] = referer;
+    } else {
+      headers['Referer'] = `https://${targetObj.host}/`;
     }
   } catch (e) {
     if (referer) headers['Referer'] = referer;
@@ -347,6 +509,7 @@ app.get('/api/proxy', async (req, res) => {
       headers: headers,
       responseType: 'stream',
       timeout: 30000,
+      maxRedirects: 10,
       validateStatus: (status) => status >= 200 && status < 300 || status === 206
     });
 
@@ -365,9 +528,11 @@ app.get('/api/proxy', async (req, res) => {
       }
     });
 
-    // Forcer Content-Type video/mp4 si l'hébergeur renvoie un type générique (ex: application/octet-stream)
+    // Forcer Content-Type approprie (m3u8 vs mp4)
     const ct = (response.headers['content-type'] || '').toLowerCase();
-    if (!ct.includes('video/') && !ct.includes('application/vnd.apple.mpegurl') && !ct.includes('audio/')) {
+    if (videoUrl.includes('.m3u8') || ct.includes('mpegurl') || ct.includes('m3u8')) {
+      res.setHeader('content-type', 'application/vnd.apple.mpegurl');
+    } else if (!ct.includes('video/') && !ct.includes('application/') && !ct.includes('audio/') && !ct.includes('image/') && !ct.includes('json')) {
       res.setHeader('content-type', 'video/mp4');
     }
 
@@ -384,6 +549,9 @@ app.get('/api/proxy', async (req, res) => {
 
   } catch (error) {
     console.error('Erreur Proxy Vidéo:', error.message);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', '*');
     if (error.response) {
       res.status(error.response.status).send(error.response.statusText);
     } else {
@@ -394,16 +562,18 @@ app.get('/api/proxy', async (req, res) => {
 
 // Proxy Embed HTML pour débloquer les X-Frame-Options & Content-Security-Policy (CSP)
 app.get('/api/embed-proxy', async (req, res) => {
-  const embedUrl = req.query.url;
+  let embedUrl = req.query.url;
   const referer = req.query.referer || embedUrl;
+
+  if (embedUrl && embedUrl.startsWith('http://')) {
+    embedUrl = embedUrl.replace('http://', 'https://');
+  }
 
   if (!embedUrl || isPrivateOrInternalUrl(embedUrl)) {
     return res.status(403).send('Accès refusé : URL iframe privée ou invalide (Protection Anti-SSRF).');
   }
 
   console.log(`[Embed Proxy] Déblocage de l'iframe pour : ${embedUrl}`);
-
-  if (!embedUrl) return res.status(400).send('URL requise.');
 
   try {
     const response = await axios.get(embedUrl, {
@@ -432,6 +602,9 @@ app.get('/api/embed-proxy', async (req, res) => {
 
     let html = response.data;
     if (typeof html === 'string') {
+      // Conversion automatique des liens insecure http:// vers https:// pour éviter les erreurs Mixed Content sur Render
+      html = html.replace(/http:\/\//gi, 'https://');
+
       // Détecter si la vidéo a été supprimée chez l'hébergeur (détection structurelle fiable pour Sibnet & hébergeurs génériques)
       const isDeadSibnet = embedUrl.includes('sibnet.ru') && !html.includes('.mp4') && !html.includes('player.src');
       const isDeadGeneric = html.includes('File was deleted') || html.includes('Video not found') || html.includes('404 Not Found');
@@ -444,14 +617,15 @@ app.get('/api/embed-proxy', async (req, res) => {
         </div>`);
       }
 
-      // Injecter la balise <base> pour résoudre les URLs relatives vers l'hôte d'origine
+      // Injecter la balise <base> et la balise CSP upgrade-insecure-requests
       try {
         const urlObj = new URL(embedUrl);
         const originUrl = `${urlObj.protocol}//${urlObj.host}/`;
+        const cspMeta = `<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">`;
         if (html.includes('<head>')) {
-          html = html.replace('<head>', `<head><base href="${originUrl}">`);
+          html = html.replace('<head>', `<head>${cspMeta}<base href="${originUrl}">`);
         } else {
-          html = `<base href="${originUrl}">${html}`;
+          html = `<head>${cspMeta}<base href="${originUrl}"></head>${html}`;
         }
       } catch (e) {}
 
@@ -541,9 +715,28 @@ app.get('/api/embed-proxy', async (req, res) => {
     } catch(e) {}
   }
 
-  // Intercepter et neutraliser XHR publicitaires (renvoie statut 200 factice)
+  // Intercepter et neutraliser XHR publicitaires & rerouter les requêtes cross-origin via /api/proxy
+  var EMBED_ORIGIN = ${JSON.stringify(embedUrl)};
+  function getProxiedUrl(targetUrl) {
+    if (!targetUrl || typeof targetUrl !== 'string') return targetUrl;
+    if (AD_RE.test(targetUrl)) return targetUrl;
+    if (targetUrl.startsWith('/api/proxy') || targetUrl.includes('/api/proxy?')) return targetUrl;
+    if (targetUrl.startsWith('data:') || targetUrl.startsWith('blob:')) return targetUrl;
+    try {
+      var resolved = new URL(targetUrl, document.baseURI || window.location.href).href;
+      if (resolved.startsWith('http://')) {
+        resolved = resolved.replace('http://', 'https://');
+      }
+      var parsed = new URL(resolved);
+      if (parsed.origin !== window.location.origin) {
+        return '/api/proxy?url=' + encodeURIComponent(resolved) + '&referer=' + encodeURIComponent(EMBED_ORIGIN);
+      }
+    } catch(e) {}
+    return targetUrl;
+  }
+
   var _xhrOpen = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function(method, url) {
+  XMLHttpRequest.prototype.open = function(method, url, async, user, pass) {
     if (AD_RE.test(url || '')) {
       this.send = function() {
         Object.defineProperty(this, 'status', { value: 200 });
@@ -553,7 +746,8 @@ app.get('/api/embed-proxy', async (req, res) => {
       };
       return;
     }
-    return _xhrOpen.apply(this, arguments);
+    var proxiedUrl = getProxiedUrl(url);
+    return _xhrOpen.call(this, method, proxiedUrl, async !== false, user, pass);
   };
   // Intercepter et neutraliser fetch publicitaires
   var _fetch = window.fetch;
@@ -563,7 +757,12 @@ app.get('/api/embed-proxy', async (req, res) => {
       if (AD_RE.test(u || '')) {
         return Promise.resolve(new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
       }
-      return _fetch.apply(this, arguments);
+      var proxiedUrl = getProxiedUrl(u);
+      if (typeof url === 'object' && url !== null && url.url) {
+        url = new Request(proxiedUrl, opts || url);
+        return _fetch.call(this, url);
+      }
+      return _fetch.call(this, proxiedUrl, opts);
     };
   }
   // Intercepter sendBeacon publicitaires
@@ -685,9 +884,9 @@ app.get('/api/resolve-embed', async (req, res) => {
     }
 
     // ── Vidmoly ────────────────────────────────────────────────
-    if (embedUrl.includes('vidmoly.to')) {
+    if (embedUrl.includes('vidmoly')) {
       const vidResp = await axios.get(embedUrl, {
-        headers: { 'User-Agent': ua, 'Referer': 'https://vidmoly.to/' },
+        headers: { 'User-Agent': ua, 'Referer': embedUrl },
         timeout: 10000
       });
       const html = vidResp.data || '';
@@ -697,14 +896,32 @@ app.get('/api/resolve-embed', async (req, res) => {
       const mp4Match  = html.match(/["'](https?:\/\/[^"']+\.mp4[^"']*)/);
 
       if (m3u8Match) {
-        return res.json({ success: true, videoUrl: `/api/proxy?url=${encodeURIComponent(m3u8Match[1])}&referer=${encodeURIComponent('https://vidmoly.to/')}`, type: 'hls' });
+        return res.json({ success: true, videoUrl: `/api/proxy?url=${encodeURIComponent(m3u8Match[1])}&referer=${encodeURIComponent(embedUrl)}`, type: 'hls' });
       }
       if (mp4Match) {
-        return res.json({ success: true, videoUrl: `/api/proxy?url=${encodeURIComponent(mp4Match[1])}&referer=${encodeURIComponent('https://vidmoly.to/')}`, type: 'mp4' });
+        return res.json({ success: true, videoUrl: `/api/proxy?url=${encodeURIComponent(mp4Match[1])}&referer=${encodeURIComponent(embedUrl)}`, type: 'mp4' });
       }
 
       return res.json({ success: false, error: 'URL Vidmoly introuvable, utilisation de l\'iframe.' });
     }
+
+    // ── Hébergeurs génériques (Vidoza, Franime, etc.) ────────────
+    try {
+      const genResp = await axios.get(embedUrl, {
+        headers: { 'User-Agent': ua, 'Referer': embedUrl },
+        timeout: 8000
+      });
+      const genHtml = genResp.data || '';
+      const m3u8Match = genHtml.match(/["'](https?:\/\/[^"']+\.m3u8[^"']*)/);
+      const mp4Match  = genHtml.match(/["'](https?:\/\/[^"']+\.mp4[^"']*)/);
+
+      if (m3u8Match) {
+        return res.json({ success: true, videoUrl: `/api/proxy?url=${encodeURIComponent(m3u8Match[1])}&referer=${encodeURIComponent(embedUrl)}`, type: 'hls' });
+      }
+      if (mp4Match) {
+        return res.json({ success: true, videoUrl: `/api/proxy?url=${encodeURIComponent(mp4Match[1])}&referer=${encodeURIComponent(embedUrl)}`, type: 'mp4' });
+      }
+    } catch (eGen) {}
 
     return res.json({ success: false, error: 'Hébergeur non supporté par le résolveur direct.' });
 
