@@ -382,74 +382,22 @@
 
   <!-- ══ MODAL LECTEUR PREMIUM VIDÉO ══════════════════════ -->
   <div id="player-modal" class="modal player-modal">
-    <div class="modal-content player-modal-content" id="player-modal-content">
+    <div class="modal-content player-modal-content">
       <span class="close-btn" id="close-player-btn">&times;</span>
       <div class="player-header">
-        <div>
-          <h3 id="player-anime-title">Titre</h3>
-          <p id="player-episode-title">—</p>
-        </div>
-        <button id="toggle-watchparty-sidebar-btn" class="btn btn-sm btn-watchparty-toggle">
-          <i class="fa-solid fa-users"></i> Watch Party Chat <span id="wp-member-badge" class="wp-badge">0</span>
-        </button>
+        <h3 id="player-anime-title">Titre</h3>
+        <p id="player-episode-title">—</p>
       </div>
-
-      <div class="player-main-layout">
-        <div class="video-container-wrapper" id="video-container-wrapper">
-          <video id="premium-video-player" controls playsinline>
-            Votre navigateur ne supporte pas la lecture HTML5.
-          </video>
-          <iframe id="premium-iframe-player" allow="autoplay; fullscreen; accelerometer; gyroscope; magnetometer" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;border:none;z-index:1;"></iframe>
-          <div id="video-loader" class="video-loader">
-            <div class="loader-spinner"></div>
-            <p>Connexion sécurisée astream…</p>
-          </div>
-          <!-- Overlay de réactions Emoji animées -->
-          <div id="wp-emoji-overlay" class="wp-emoji-overlay"></div>
-        </div>
-
-        <!-- Sidebar Watch Party en direct -->
-        <div id="watchparty-sidebar" class="watchparty-sidebar" style="display:none">
-          <div class="wp-sidebar-header">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span class="wp-room-badge" id="wp-room-code-display">WP-XXXX</span>
-              <span id="wp-role-badge" class="wp-badge-host">👑 Hôte</span>
-            </div>
-            <button id="wp-copy-link-btn" class="btn btn-xs btn-secondary" title="Copier le lien d'invitation">
-              <i class="fa-solid fa-copy"></i> Copier Lien
-            </button>
-          </div>
-
-          <div class="wp-members-bar">
-            <div style="display:flex;align-items:center;gap:6px">
-              <i class="fa-solid fa-user-group" style="color:var(--accent-cyan)"></i>
-              <strong style="font-size:0.85rem;color:#fff">Participants (<span id="wp-members-count">1</span>) :</strong>
-            </div>
-            <div id="wp-members-avatars" class="wp-members-list"></div>
-          </div>
-
-          <div class="wp-chat-container">
-            <div id="wp-chat-messages" class="wp-chat-messages">
-              <div class="wp-sys-msg">Bienvenue dans la Watch Party !</div>
-            </div>
-          </div>
-
-          <div class="wp-emoji-bar">
-            <button class="wp-emoji-btn" data-emoji="🔥">🔥</button>
-            <button class="wp-emoji-btn" data-emoji="😂">😂</button>
-            <button class="wp-emoji-btn" data-emoji="😱">😱</button>
-            <button class="wp-emoji-btn" data-emoji="🍿">🍿</button>
-            <button class="wp-emoji-btn" data-emoji="👏">👏</button>
-            <button class="wp-emoji-btn" data-emoji="❤️">❤️</button>
-          </div>
-
-          <div class="wp-chat-input-row">
-            <input type="text" id="wp-chat-input" placeholder="Message en direct…" maxlength="200">
-            <button id="wp-send-chat-btn" class="btn btn-primary btn-sm"><i class="fa-solid fa-paper-plane"></i></button>
-          </div>
+      <div class="video-container-wrapper">
+        <video id="premium-video-player" controls playsinline>
+          Votre navigateur ne supporte pas la lecture HTML5.
+        </video>
+        <iframe id="premium-iframe-player" allow="autoplay; fullscreen; accelerometer; gyroscope; magnetometer" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;border:none;z-index:1;"></iframe>
+        <div id="video-loader" class="video-loader">
+          <div class="loader-spinner"></div>
+          <p>Connexion sécurisée astream…</p>
         </div>
       </div>
-
       <div class="player-controls-info">
         <div class="source-selector-container">
           <label for="stream-source-select"><i class="fa-solid fa-server"></i> Source :</label>

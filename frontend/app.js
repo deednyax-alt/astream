@@ -2133,8 +2133,6 @@ function setupWatchParty() {
           connectWatchPartySSE(res.roomCode);
           closeModal(wpModal);
           alert(`🍿 Watch Party ${res.roomCode} créée ! Partagez le code ou le lien avec vos amis.`);
-
-          if (mainLayout) mainLayout.classList.add('has-sidebar');
         } else {
           statusMsg.innerHTML = `<span style="color:#ef4444">Erreur : ${res.error || 'Impossible de créer la salle.'}</span>`;
         }
@@ -2166,8 +2164,6 @@ function setupWatchParty() {
           initRoomState(res.room);
           connectWatchPartySSE(res.roomCode);
           closeModal(wpModal);
-
-          if (mainLayout) mainLayout.classList.add('has-sidebar');
 
           if (res.room.media) {
             resolveAndPlay(res.room.media);
