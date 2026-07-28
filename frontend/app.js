@@ -914,7 +914,23 @@ async function runSearch(q) {
 
   try {
     const data = await dcFetch('/search', { q, type: 'all' });
-    const items = (data.results || []).filter(r => r.poster);
+    let items = (data.results || []).filter(r => r.poster);
+
+    // Trier les résultats de recherche par pertinence (titre exact, note TMDB & pertinence)
+    const qLower = q.toLowerCase().trim();
+    items.sort((a, b) => {
+      const aExact = (a.title || '').toLowerCase().trim() === qLower;
+      const bExact = (b.title || '').toLowerCase().trim() === qLower;
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+
+      const aRating = parseFloat(a.rating || 0);
+      const bRating = parseFloat(b.rating || 0);
+      if (bRating !== aRating) return bRating - aRating;
+
+      return 0;
+    });
+
     grid.innerHTML = '';
     if (items.length === 0) {
       grid.innerHTML = `<p style="grid-column:1/-1;color:var(--text-muted);padding:20px">Aucun résultat pour « ${q} ».</p>`;
@@ -1279,6 +1295,12 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
     const params = { id: targetId, type: tType, episode, version: v };
     if (s !== undefined && s !== null) params.season = s;
     const res = await dcFetch('/resolve', params, { retries: 0, timeout: timeoutMs });
+
+    // Si embedUrl contient un fichier vidéo MP4/HLS direct (ex: ultra.citron-edge.lol pour Snowfall), le prioriser
+    if (res && res.embedUrl && (res.embedUrl.endsWith('.mp4') || res.embedUrl.endsWith('.m3u8') || res.embedUrl.includes('citron-edge'))) {
+      res.streamUrl = res.embedUrl;
+    }
+
     const stream = res?.streamUrl || res?.embedUrl || '';
     if (!res || !res.success || !stream || stream.includes('vidsrc.to/embed/movie/https:') || (tType === 'tv' && stream.includes('vidsrc.to/embed/tv/') && !res.streamUrl)) {
       throw new Error(res?.error || 'Flux indisponible pour ces paramètres.');
