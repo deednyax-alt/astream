@@ -88,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSubTabs();
   setupSearch();
   setupPlayerEvents();
+  setupAutoplayNext();
   setupMangaReaderEvents();
   setupSuggestionEvents();
   setupHistoryEvents();
@@ -1249,14 +1250,16 @@ function setupSuggestionEvents() {
 // ─── Résolution & Lecture Vidéo ───────────────────────────────
 async function resolveAndPlay({ id, type, season, episode, isAnime }) {
   stopPlayer();
+  cancelAutoplayNext();
 
-  // Normaliser le paramètre saison (ex: "Saison 1" -> 1)
-  let cleanSeason = season;
-  if (typeof cleanSeason === 'string') {
-    const numMatch = cleanSeason.match(/\d+/);
-    cleanSeason = numMatch ? parseInt(numMatch[0], 10) : cleanSeason;
-  }
-  season = cleanSeason;
+  // Enregistrer l'état de lecture actuel pour l'enchaînement automatique d'épisodes
+  currentPlayingState = {
+    id: id || currentAnime?.id,
+    type: type || currentAnime?.type || 'tv',
+    season: season || 1,
+    episode: episode || 1,
+    isAnime: !!isAnime
+  };
 
   playerAnimeTitle.textContent = currentAnime?.title || 'Lecture…';
   const displaySeason = season || 1;
@@ -1705,7 +1708,97 @@ function setupPlayerEvents() {
   });
 }
 
+// ─── Gestion de la Lecture Auto / Épisode Suivant ────────────
+let currentPlayingState = { id: null, type: null, season: 1, episode: 1, isAnime: false };
+let autoplayInterval = null;
+
+function setupAutoplayNext() {
+  const toggle = $('autoplay-next-toggle');
+  if (toggle) {
+    const saved = localStorage.getItem('astream_autoplay_next');
+    if (saved !== null) {
+      toggle.checked = saved === 'true';
+    }
+    toggle.onchange = () => {
+      localStorage.setItem('astream_autoplay_next', toggle.checked);
+    };
+  }
+
+  const cancelBtn = $('autoplay-cancel-btn');
+  const nowBtn = $('autoplay-now-btn');
+  if (cancelBtn) cancelBtn.onclick = cancelAutoplayNext;
+  if (nowBtn) nowBtn.onclick = triggerNextEpisodeImmediately;
+
+  if (videoPlayer) {
+    videoPlayer.addEventListener('ended', handleVideoEnded);
+  }
+}
+
+function handleVideoEnded() {
+  const toggle = $('autoplay-next-toggle');
+  if (toggle && !toggle.checked) return;
+
+  if (!currentPlayingState || !currentPlayingState.episode) return;
+
+  const nextEp = (parseInt(currentPlayingState.episode, 10) || 1) + 1;
+  startAutoplayCountdown(nextEp);
+}
+
+function startAutoplayCountdown(nextEp) {
+  cancelAutoplayNext();
+
+  const overlay = $('autoplay-countdown-overlay');
+  const nextTitle = $('autoplay-next-title');
+  const secEl = $('autoplay-seconds');
+  const fill = $('autoplay-progress-fill');
+
+  if (!overlay) return;
+
+  const displaySeason = currentPlayingState.season || 1;
+  if (nextTitle) nextTitle.textContent = `${currentAnime?.title || 'Série'} — S${displaySeason} Ép. ${nextEp}`;
+
+  overlay.style.display = 'flex';
+
+  let remaining = 5;
+  if (secEl) secEl.textContent = remaining;
+  if (fill) fill.style.width = '100%';
+
+  autoplayInterval = setInterval(() => {
+    remaining--;
+    if (secEl) secEl.textContent = remaining;
+    if (fill) fill.style.width = `${(remaining / 5) * 100}%`;
+
+    if (remaining <= 0) {
+      triggerNextEpisodeImmediately();
+    }
+  }, 1000);
+}
+
+function cancelAutoplayNext() {
+  if (autoplayInterval) {
+    clearInterval(autoplayInterval);
+    autoplayInterval = null;
+  }
+  const overlay = $('autoplay-countdown-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function triggerNextEpisodeImmediately() {
+  cancelAutoplayNext();
+  if (!currentPlayingState || !currentPlayingState.episode) return;
+
+  const nextEp = (parseInt(currentPlayingState.episode, 10) || 1) + 1;
+  resolveAndPlay({
+    id: currentPlayingState.id || currentAnime?.id,
+    type: currentPlayingState.type || currentAnime?.type || 'tv',
+    season: currentPlayingState.season,
+    episode: nextEp,
+    isAnime: currentPlayingState.isAnime
+  });
+}
+
 function stopPlayer() {
+  cancelAutoplayNext();
   window._triedSources = new Set();
   window._triedAltLang = false;
   if (hlsInstance) {

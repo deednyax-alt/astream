@@ -397,13 +397,31 @@
           <div class="loader-spinner"></div>
           <p>Connexion sécurisée astream…</p>
         </div>
+        <!-- Overlay Compte à Rebours Épisode Suivant -->
+        <div id="autoplay-countdown-overlay" class="autoplay-countdown-overlay" style="display:none">
+          <div class="autoplay-countdown-box">
+            <div class="autoplay-icon"><i class="fa-solid fa-circle-play"></i></div>
+            <h4 id="autoplay-next-title">Épisode suivant…</h4>
+            <p id="autoplay-timer-text">Lancement automatique dans <strong id="autoplay-seconds">5</strong>s</p>
+            <div class="autoplay-progress-bar"><div id="autoplay-progress-fill"></div></div>
+            <div class="autoplay-btn-row">
+              <button id="autoplay-now-btn" class="btn btn-primary btn-sm"><i class="fa-solid fa-play"></i> Lancer Maintenant</button>
+              <button id="autoplay-cancel-btn" class="btn btn-secondary btn-sm"><i class="fa-solid fa-xmark"></i> Annuler</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="player-controls-info">
         <div class="source-selector-container">
           <label for="stream-source-select"><i class="fa-solid fa-server"></i> Source :</label>
           <select id="stream-source-select" class="glass-select"></select>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <label class="autoplay-toggle-label" title="Enchaîner automatiquement sur l'épisode suivant quand la vidéo se termine">
+            <input type="checkbox" id="autoplay-next-toggle" checked>
+            <span class="autoplay-custom-checkbox"></span>
+            <span><i class="fa-solid fa-forward-step" style="color:var(--accent-cyan)"></i> Lecture Auto</span>
+          </label>
           <button class="version-btn active" data-version="vf">VF</button>
           <button class="version-btn" data-version="vostfr">VOSTFR</button>
           <span class="proxy-active-badge"><i class="fa-solid fa-shield-halved"></i> Ad-Block Actif</span>

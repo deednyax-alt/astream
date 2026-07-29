@@ -1563,3 +1563,121 @@ footer i {
   margin-bottom: 8px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+/* ── Toggle Lecture Auto (Épisode Suivant) ───────────────────── */
+.autoplay-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.autoplay-toggle-label:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--accent-cyan);
+}
+
+.autoplay-toggle-label input {
+  display: none;
+}
+
+.autoplay-custom-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid var(--accent-cyan);
+  display: inline-block;
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.autoplay-toggle-label input:checked + .autoplay-custom-checkbox {
+  background: var(--accent-cyan);
+}
+
+.autoplay-toggle-label input:checked + .autoplay-custom-checkbox::after {
+  content: '✓';
+  position: absolute;
+  top: -3px;
+  left: 2px;
+  color: #000;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+/* ── Overlay Compte à Rebours Épisode Suivant ─────────────── */
+.autoplay-countdown-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(8, 9, 13, 0.88);
+  backdrop-filter: blur(8px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.autoplay-countdown-box {
+  background: rgba(22, 27, 38, 0.95);
+  border: 1px solid var(--accent-purple);
+  box-shadow: 0 0 30px rgba(168, 85, 247, 0.3);
+  padding: 24px 32px;
+  border-radius: 16px;
+  text-align: center;
+  max-width: 420px;
+  width: 90%;
+}
+
+.autoplay-icon {
+  font-size: 2.5rem;
+  color: var(--accent-cyan);
+  margin-bottom: 10px;
+  animation: pulseGlow 1.5s infinite;
+}
+
+.autoplay-countdown-box h4 {
+  font-size: 1.15rem;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.autoplay-countdown-box p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.autoplay-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+#autoplay-progress-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+  transition: width 1s linear;
+}
+
+.autoplay-btn-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
