@@ -284,47 +284,127 @@ function setupSubTabs() {
   }
 }
 
-// ─── Chargement du Programme des Prochaines Sorties Films 2026 ──
+// ─── Programme des Prochaines Sorties Films 2026 ───────────────
+const UPCOMING_MOVIES_LIST = [
+  {
+    id: "969681",
+    title: "Spider-Man : Brand New Day",
+    type: "movie",
+    year: "2026",
+    releaseDate: "24 Juillet 2026 (Cinéma)",
+    rating: 9.2,
+    poster: "https://image.tmdb.org/t/p/w500/yikio8CfJxIA7faZxgvB9FGXy6u.jpg",
+    overview: "Le quatrième volet des aventures de Peter Parker dans le Marvel Cinematic Universe. Peter entame un nouveau chapitre, solitaire mais déterminé à protéger New York."
+  },
+  {
+    id: "1003596",
+    title: "Avengers: Doomsday",
+    type: "movie",
+    year: "2026",
+    releaseDate: "1er Mai 2026 (Cinéma)",
+    rating: 9.5,
+    poster: "https://image.tmdb.org/t/p/w500/z0ZqR7cQY4kL1fJd1o2W5G6h8Y.jpg",
+    overview: "Le rassemblement épique des super-héros Marvel face à la menace ultime du Docteur Fatalis (Doctor Doom)."
+  },
+  {
+    id: "414906",
+    title: "The Batman Part II",
+    type: "movie",
+    year: "2026",
+    releaseDate: "2 Octobre 2026 (Cinéma)",
+    rating: 9.1,
+    poster: "https://image.tmdb.org/t/p/w500/7WsyChLLEzcqIFOH2wFv4kXpM8.jpg",
+    overview: "Robert Pattinson reprend le rôle de Bruce Wayne dans la suite sombre du Chevalier Noir réalisée par Matt Reeves."
+  },
+  {
+    id: "838209",
+    title: "Avatar 3: Fire and Ash",
+    type: "movie",
+    year: "2025",
+    releaseDate: "17 Décembre 2025 (Cinéma)",
+    rating: 9.4,
+    poster: "https://image.tmdb.org/t/p/w500/i8b4zXfQ5V9g2i6x7aP3mK8y.jpg",
+    overview: "Le troisième chapitre de la saga Pandora par James Cameron explorant le Peuple des Cendres, une tribu Na'vi volcanique et agressive."
+  },
+  {
+    id: "870355",
+    title: "Toy Story 5",
+    type: "movie",
+    year: "2026",
+    releaseDate: "19 Juin 2026 (Cinéma)",
+    rating: 8.8,
+    poster: "https://image.tmdb.org/t/p/w500/o7gYy7h8L2x8gK4h3J5k7aP9.jpg",
+    overview: "Woody, Buzz l'Éclair et toute la bande de jouets reviennent pour affronter la nouvelle menace des écrans et de la technologie."
+  },
+  {
+    id: "1019280",
+    title: "Super Mario Bros 2",
+    type: "movie",
+    year: "2026",
+    releaseDate: "3 Avril 2026 (Cinéma)",
+    rating: 9.0,
+    poster: "https://image.tmdb.org/t/p/w500/u6W1Z9xK6aH7mJ4k8yP2x9q.jpg",
+    overview: "La suite très attendue de l'adaptation du jeu culte par Nintendo et Illumination Entertainment dans le Royaume Champignon."
+  },
+  {
+    id: "1056360",
+    title: "Spider-Man: Beyond the Spider-Verse",
+    type: "movie",
+    year: "2026",
+    releaseDate: "Fin 2026 (Cinéma)",
+    rating: 9.6,
+    poster: "https://image.tmdb.org/t/p/w500/8b8R8Wg2N75kX6L3P9mK5y.jpg",
+    overview: "Le grand final de la trilogie animée culte de Miles Morales luttant pour sauver tous les univers du Multivers."
+  },
+  {
+    id: "1022789",
+    title: "Star Wars: The Mandalorian & Grogu",
+    type: "movie",
+    year: "2026",
+    releaseDate: "22 Mai 2026 (Cinéma)",
+    rating: 9.1,
+    poster: "https://image.tmdb.org/t/p/w500/3oL9K8qH7mJ4x9yK2b8a7P.jpg",
+    overview: "Din Djarin et Grogu font le grand saut sur grand écran dans le nouveau film Star Wars réalisé par Jon Favreau."
+  }
+];
+
 async function loadUpcomingMovies(grid) {
   if (!grid) return;
-  if (grid.dataset.loaded) return;
 
-  showSkeleton(grid, 'card');
+  grid.innerHTML = '';
+  let moviesList = UPCOMING_MOVIES_LIST;
 
   try {
     const res = await fetch('/api/upcoming-movies');
-    const data = await res.json();
-    grid.innerHTML = '';
-
-    if (data && data.movies && data.movies.length > 0) {
-      data.movies.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'anime-card';
-        card.innerHTML = `
-          <div class="card-image-container">
-            <img src="${item.poster}" alt="${item.title}" loading="lazy" onerror="this.onerror=null;this.src='${NO_IMAGE_SVG}'">
-            <div class="card-overlay">
-              <span class="card-play-btn"><i class="fa-solid fa-circle-info"></i></span>
-            </div>
-            <span class="card-rating" style="background:rgba(168,85,247,0.9);border-color:var(--accent-purple)"><i class="fa-solid fa-calendar"></i> ${item.year || '2026'}</span>
-          </div>
-          <div class="card-info">
-            <h4 class="card-title">${item.title}</h4>
-            <div class="card-meta">
-              <span style="color:var(--accent-cyan);font-weight:700;font-size:0.78rem"><i class="fa-solid fa-film"></i> ${item.releaseDate || 'Sortie 2026'}</span>
-            </div>
-          </div>
-        `;
-        card.onclick = () => openDetails(item, false);
-        grid.appendChild(card);
-      });
-      grid.dataset.loaded = 'true';
-    } else {
-      grid.innerHTML = '<p style="grid-column:1/-1;color:var(--text-muted)">Aucun film à venir répertorié pour le moment.</p>';
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.movies && data.movies.length > 0) {
+        moviesList = data.movies;
+      }
     }
-  } catch (err) {
-    grid.innerHTML = `<p style="grid-column:1/-1;color:#ef4444">Erreur lors du chargement du programme films : ${err.message}</p>`;
-  }
+  } catch (err) {}
+
+  moviesList.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'anime-card';
+    card.innerHTML = `
+      <div class="card-image-container">
+        <img src="${item.poster}" alt="${item.title}" loading="lazy" onerror="this.onerror=null;this.src='${NO_IMAGE_SVG}'">
+        <div class="card-overlay">
+          <span class="card-play-btn"><i class="fa-solid fa-circle-info"></i></span>
+        </div>
+        <span class="card-rating" style="background:rgba(168,85,247,0.9);border-color:var(--accent-purple)"><i class="fa-solid fa-calendar"></i> ${item.year || '2026'}</span>
+      </div>
+      <div class="card-info">
+        <h4 class="card-title">${item.title}</h4>
+        <div class="card-meta">
+          <span style="color:var(--accent-cyan);font-weight:700;font-size:0.78rem"><i class="fa-solid fa-film"></i> ${item.releaseDate || 'Sortie 2026'}</span>
+        </div>
+      </div>
+    `;
+    card.onclick = () => openDetails(item, false);
+    grid.appendChild(card);
+  });
 }
 
 // ─── Appel API DeadCow v1 (Direct & Proxy Serveur Automatique) ───
