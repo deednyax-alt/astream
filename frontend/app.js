@@ -1300,8 +1300,8 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
     if (s !== undefined && s !== null) params.season = s;
     const res = await dcFetch('/resolve', params, { retries: 0, timeout: timeoutMs });
 
-    // Si embedUrl contient un fichier vidéo MP4/HLS direct (ex: ultra.citron-edge.lol pour Snowfall), le prioriser
-    if (res && res.embedUrl && (res.embedUrl.endsWith('.mp4') || res.embedUrl.endsWith('.m3u8') || res.embedUrl.includes('citron-edge'))) {
+    // Si embedUrl contient un fichier vidéo MP4/HLS direct (ex: citron-edge, mp4, m3u8), FORCER streamUrl vers embedUrl pour le Lecteur Principal
+    if (res && res.embedUrl && (res.embedUrl.endsWith('.mp4') || res.embedUrl.endsWith('.m3u8') || res.embedUrl.includes('citron-edge') || res.embedUrl.includes('.mp4?'))) {
       res.streamUrl = res.embedUrl;
     }
 
@@ -1439,18 +1439,26 @@ function buildSourceSelector(data) {
     return u;
   };
 
-  // 1. Placer le flux direct astream en PREMIER s'il est disponible (Lecteur Original)
-  if (data.streamUrl) {
-    const cleanStream = cleanUrl(data.streamUrl);
-    if (cleanStream) {
-      sources.push({ name: '🟢 Lecteur Direct astream (Recommandé)', url: cleanStream });
+  // 1. Si embedUrl contient un fichier MP4/HLS direct, le placer en TOUT PREMIER au lieu d'une iframe
+  if (data.embedUrl && (data.embedUrl.endsWith('.mp4') || data.embedUrl.endsWith('.m3u8') || data.embedUrl.includes('citron-edge') || data.embedUrl.includes('.mp4?'))) {
+    const cleanEmbed = cleanUrl(data.embedUrl);
+    if (cleanEmbed && !sources.some(s => s.url === cleanEmbed)) {
+      sources.push({ name: '🟢 Lecteur Direct 1080p astream (Recommandé)', url: cleanEmbed });
     }
   }
 
-  // 2. Placer l'embed principal s'il est disponible et différent du flux direct
-  if (data.embedUrl && data.embedUrl !== data.streamUrl) {
+  // 2. Placer le flux direct astream s'il est disponible et non doublon
+  if (data.streamUrl) {
+    const cleanStream = cleanUrl(data.streamUrl);
+    if (cleanStream && !sources.some(s => s.url === cleanStream)) {
+      sources.push({ name: '🟢 Lecteur Direct astream (HD)', url: cleanStream });
+    }
+  }
+
+  // 3. Placer l'embed principal s'il est disponible et non doublon
+  if (data.embedUrl) {
     const cleanEmbed = cleanUrl(data.embedUrl);
-    if (cleanEmbed) {
+    if (cleanEmbed && !sources.some(s => s.url === cleanEmbed)) {
       sources.push({ name: '🎬 Lecteur Embed Principal', url: cleanEmbed });
     }
   }
