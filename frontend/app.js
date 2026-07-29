@@ -256,6 +256,75 @@ function setupSubTabs() {
       renderScheduleForDay(tab.dataset.day);
     });
   });
+
+  // Basculement Planning Animes Hebdo vs Prochaines Sorties Films 2026
+  const btnSchedAnimes = $('btn-schedule-animes');
+  const btnSchedMovies = $('btn-schedule-movies');
+  const gridSchedule = $('grid-schedule');
+  const gridMoviesSchedule = $('grid-movies-schedule');
+  const dayTabsGroup = $('schedule-day-tabs');
+
+  if (btnSchedAnimes && btnSchedMovies) {
+    btnSchedAnimes.onclick = () => {
+      btnSchedAnimes.classList.add('active');
+      btnSchedMovies.classList.remove('active');
+      if (gridSchedule) gridSchedule.style.display = 'grid';
+      if (gridMoviesSchedule) gridMoviesSchedule.style.display = 'none';
+      if (dayTabsGroup) dayTabsGroup.style.display = 'flex';
+    };
+
+    btnSchedMovies.onclick = () => {
+      btnSchedMovies.classList.add('active');
+      btnSchedAnimes.classList.remove('active');
+      if (gridSchedule) gridSchedule.style.display = 'none';
+      if (gridMoviesSchedule) gridMoviesSchedule.style.display = 'grid';
+      if (dayTabsGroup) dayTabsGroup.style.display = 'none';
+      loadUpcomingMovies(gridMoviesSchedule);
+    };
+  }
+}
+
+// ─── Chargement du Programme des Prochaines Sorties Films 2026 ──
+async function loadUpcomingMovies(grid) {
+  if (!grid) return;
+  if (grid.dataset.loaded) return;
+
+  showSkeleton(grid, 'card');
+
+  try {
+    const res = await fetch('/api/upcoming-movies');
+    const data = await res.json();
+    grid.innerHTML = '';
+
+    if (data && data.movies && data.movies.length > 0) {
+      data.movies.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'anime-card';
+        card.innerHTML = `
+          <div class="card-image-container">
+            <img src="${item.poster}" alt="${item.title}" loading="lazy" onerror="this.onerror=null;this.src='${NO_IMAGE_SVG}'">
+            <div class="card-overlay">
+              <span class="card-play-btn"><i class="fa-solid fa-circle-info"></i></span>
+            </div>
+            <span class="card-rating" style="background:rgba(168,85,247,0.9);border-color:var(--accent-purple)"><i class="fa-solid fa-calendar"></i> ${item.year || '2026'}</span>
+          </div>
+          <div class="card-info">
+            <h4 class="card-title">${item.title}</h4>
+            <div class="card-meta">
+              <span style="color:var(--accent-cyan);font-weight:700;font-size:0.78rem"><i class="fa-solid fa-film"></i> ${item.releaseDate || 'Sortie 2026'}</span>
+            </div>
+          </div>
+        `;
+        card.onclick = () => openDetails(item, false);
+        grid.appendChild(card);
+      });
+      grid.dataset.loaded = 'true';
+    } else {
+      grid.innerHTML = '<p style="grid-column:1/-1;color:var(--text-muted)">Aucun film à venir répertorié pour le moment.</p>';
+    }
+  } catch (err) {
+    grid.innerHTML = `<p style="grid-column:1/-1;color:#ef4444">Erreur lors du chargement du programme films : ${err.message}</p>`;
+  }
 }
 
 // ─── Appel API DeadCow v1 (Direct & Proxy Serveur Automatique) ───

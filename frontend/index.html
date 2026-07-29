@@ -186,7 +186,13 @@
       <!-- ── Section Planning des Sorties ────────────────── -->
       <div id="cat-schedule" class="category-section">
         <div class="section-title-container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;margin-bottom:20px">
-          <h2 class="section-title"><i class="fa-solid fa-calendar-days" style="color:var(--accent-purple)"></i> Planning Hebdomadaire des Sorties</h2>
+          <div style="display:flex;gap:15px;align-items:center;flex-wrap:wrap">
+            <h2 class="section-title"><i class="fa-solid fa-calendar-days" style="color:var(--accent-purple)"></i> Planning des Sorties</h2>
+            <div class="sub-tab-group" style="display:flex;gap:6px">
+              <button id="btn-schedule-animes" class="sub-tab active" style="padding:6px 14px;font-size:0.82rem"><i class="fa-solid fa-dragon" style="color:var(--accent-cyan)"></i> Animes Hebdo</button>
+              <button id="btn-schedule-movies" class="sub-tab" style="padding:6px 14px;font-size:0.82rem"><i class="fa-solid fa-film" style="color:var(--accent-purple)"></i> Films à Venir 2026</button>
+            </div>
+          </div>
           <div class="sub-tab-group" id="schedule-day-tabs" style="display:flex;gap:6px;flex-wrap:wrap">
             <button class="sub-tab" data-day="lundi">Lundi</button>
             <button class="sub-tab" data-day="mardi">Mardi</button>
