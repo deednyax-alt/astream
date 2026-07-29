@@ -1524,10 +1524,17 @@ async function playStream(url) {
     hlsInstance = null;
   }
 
+  if (typeof url === 'string' && url.startsWith('http://')) {
+    url = url.replace(/^http:\/\//i, 'https://');
+  }
+
   if (!window._triedSources) window._triedSources = new Set();
   window._triedSources.add(url);
 
   let targetUrl = url;
+  if (typeof targetUrl === 'string' && targetUrl.startsWith('http://')) {
+    targetUrl = targetUrl.replace(/^http:\/\//i, 'https://');
+  }
   const isEmbed = isRealEmbedUrl(url);
 
   // Essayer de résoudre automatiquement les URLs Embed vers le Lecteur HTML5 Principal

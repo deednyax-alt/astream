@@ -602,8 +602,8 @@ app.get('/api/embed-proxy', async (req, res) => {
 
     let html = response.data;
     if (typeof html === 'string') {
-      // Conversion automatique des liens insecure http:// vers https:// pour éviter les erreurs Mixed Content sur Render
-      html = html.replace(/http:\/\//gi, 'https://');
+      // Conversion automatique de TOUS les liens insecure HTTP (y compris les URLs échappées http:\/\/) vers HTTPS pour éviter les erreurs Mixed Content sur Render
+      html = html.replace(/http:\\\/\\\//gi, 'https:\\/\\/').replace(/http:\/\//gi, 'https://');
 
       // Détecter si la vidéo a été supprimée chez l'hébergeur (détection structurelle fiable pour Sibnet & hébergeurs génériques)
       const isDeadSibnet = embedUrl.includes('sibnet.ru') && !html.includes('.mp4') && !html.includes('player.src');
@@ -622,8 +622,8 @@ app.get('/api/embed-proxy', async (req, res) => {
         const urlObj = new URL(embedUrl);
         const originUrl = `${urlObj.protocol}//${urlObj.host}/`;
         const cspMeta = `<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">`;
-        if (html.includes('<head>')) {
-          html = html.replace('<head>', `<head>${cspMeta}<base href="${originUrl}">`);
+        if (html.toLowerCase().includes('<head>')) {
+          html = html.replace(/<head>/i, `<head>${cspMeta}<base href="${originUrl}">`);
         } else {
           html = `<head>${cspMeta}<base href="${originUrl}"></head>${html}`;
         }
