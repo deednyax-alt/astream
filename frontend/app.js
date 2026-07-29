@@ -83,6 +83,7 @@ const sugStatusDiv     = $('sug-status');
 
 // ─── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  initSplashLoader();
   setupNavTabs();
   setupCategoryTabs();
   setupSubTabs();
@@ -2505,4 +2506,43 @@ document.addEventListener('DOMContentLoaded', () => {
   setupWatchParty();
   setupHostVideoSync();
 });
+
+// ─── Écran de Chargement Initial (Splash Screen) ───────────────
+function initSplashLoader() {
+  const loader = $('app-initial-loader');
+  const progressFill = $('initial-loader-progress-fill');
+  const statusText = $('loader-status-text');
+
+  if (!loader) return;
+
+  const messages = [
+    "Initialisation du moteur astream HD…",
+    "Connexion aux résolveurs sécurisés…",
+    "Chargement des tendances & nouveautés…",
+    "Plateforme prête !"
+  ];
+
+  let progress = 0;
+  let msgIdx = 0;
+
+  const interval = setInterval(() => {
+    progress += Math.floor(Math.random() * 18) + 12;
+    if (progress > 100) progress = 100;
+
+    if (progressFill) progressFill.style.width = `${progress}%`;
+
+    if (progress > 30 && msgIdx === 0) { msgIdx = 1; if (statusText) statusText.textContent = messages[1]; }
+    if (progress > 65 && msgIdx === 1) { msgIdx = 2; if (statusText) statusText.textContent = messages[2]; }
+    if (progress >= 100) {
+      if (statusText) statusText.textContent = messages[3];
+      clearInterval(interval);
+      setTimeout(() => {
+        loader.classList.add('fade-out');
+        setTimeout(() => {
+          try { loader.remove(); } catch(e) {}
+        }, 600);
+      }, 350);
+    }
+  }, 140);
+}
 

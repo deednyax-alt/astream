@@ -15,6 +15,30 @@
 </head>
 <body>
 
+  <!-- ══ ÉCRAN DE CHARGEMENT INITIAL (SPLASH SCREEN) ════════ -->
+  <div id="app-initial-loader" class="app-initial-loader">
+    <div class="loader-backdrop-glow"></div>
+    <div class="loader-content-box">
+      <div class="loader-logo-ring">
+        <div class="loader-pulse-ring"></div>
+        <div class="loader-logo-icon">
+          <i class="fa-solid fa-play"></i>
+        </div>
+      </div>
+      <h1 class="loader-brand-title">astream <span class="loader-badge">PRO</span></h1>
+      <p id="loader-status-text" class="loader-status-text">Initialisation du moteur astream HD…</p>
+      
+      <div class="loader-progress-wrapper">
+        <div id="initial-loader-progress-fill" class="loader-progress-fill"></div>
+      </div>
+      
+      <div class="loader-footer-tags">
+        <span><i class="fa-solid fa-bolt" style="color:var(--accent-cyan)"></i> Lecteur HTML5 Fast</span>
+        <span><i class="fa-solid fa-shield-halved" style="color:var(--accent-purple)"></i> Ad-Block Intégré</span>
+      </div>
+    </div>
+  </div>
+
   <div class="glow-orb orb-1"></div>
   <div class="glow-orb orb-2"></div>
 
