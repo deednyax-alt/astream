@@ -390,6 +390,14 @@ app.post('/api/watchparty/chat', (req, res) => {
   res.json({ success: true, message: msg });
 });
 
+// 6. Récupérer l'état actuel d'une salle Watch Party (REST)
+app.get('/api/watchparty/room/:code', (req, res) => {
+  const roomCode = (req.params.code || '').trim().toUpperCase();
+  const room = watchPartyRooms.get(roomCode);
+  if (!room) return res.status(404).json({ success: false, error: 'Salle introuvable.' });
+  res.json({ success: true, room: getSanitizedRoom(room) });
+});
+
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'astream2026';
 
 // ─── Base de Données des Comptes Utilisateurs (Authentification & Rôles) ───
