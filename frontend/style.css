@@ -70,25 +70,36 @@ body {
 
 /* Header & Navigation Netflix */
 header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 48px;
-  background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(20,20,20,0.4) 60%, transparent 100%);
+  width: 100%;
+  background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(20,20,20,0.6) 70%, transparent 100%);
   position: sticky;
   top: 0;
   z-index: 100;
   transition: background-color 0.4s ease;
+  padding: 12px 0;
 }
 
 header:hover, header.scrolled {
   background: #141414;
 }
 
+.header-container {
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  box-sizing: border-box;
+}
+
 .logo {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .gradient-text {
@@ -116,8 +127,9 @@ header:hover, header.scrolled {
 
 .search-container {
   position: relative;
-  width: 25%;
-  max-width: 380px;
+  width: 28%;
+  max-width: 360px;
+  min-width: 200px;
 }
 
 .search-icon {
@@ -150,8 +162,10 @@ header:hover, header.scrolled {
 
 nav {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .nav-btn {
@@ -161,13 +175,14 @@ nav {
   font-family: var(--font-body);
   font-size: 0.88rem;
   font-weight: 500;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .nav-btn:hover {
@@ -187,11 +202,16 @@ nav {
 /* Main Content Layout */
 main {
   flex: 1;
-  padding: 10px 48px 40px 48px;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 16px 32px 60px 32px;
+  box-sizing: border-box;
 }
 
 .tab-content {
   display: none;
+  width: 100%;
 }
 
 .tab-content.active {
@@ -1833,4 +1853,51 @@ footer i {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* ══ Media Queries Réactivité & Recadrage Parfait ════════════ */
+@media (max-width: 1200px) {
+  .header-container {
+    padding: 0 20px;
+  }
+  main {
+    padding: 16px 20px 50px 20px;
+  }
+  .search-container {
+    width: 220px;
+    min-width: 160px;
+  }
+}
+
+@media (max-width: 900px) {
+  .header-container {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 0 16px;
+  }
+  .search-container {
+    order: 3;
+    width: 100%;
+    max-width: 100%;
+    min-width: auto;
+  }
+  nav {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  nav::-webkit-scrollbar {
+    display: none;
+  }
+  .hero-banner {
+    height: 380px;
+    padding: 30px;
+  }
+  .hero-content h1 {
+    font-size: 2.6rem;
+  }
 }
