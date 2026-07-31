@@ -28,6 +28,7 @@ function normalizePosterUrl(poster, item = {}) {
 // ─── État Global ─────────────────────────────────────────────
 let currentAnime   = null;
 let currentVersion = 'vf';
+let currentAnimeVersionFilter = 'all'; // 'all', 'vf', 'vostfr'
 let currentCat     = 'anime';
 let currentGenre   = 'all';
 let pages          = { anime: 1, tv: 1, movie: 1, manga: 1 };
@@ -862,6 +863,19 @@ async function loadCategory(cat, append = false) {
       });
 
       items = combined;
+
+      // Filtrer selon la version sélectionnée (VF / VOSTFR / TOUS)
+      if (currentAnimeVersionFilter === 'vf') {
+        items = items.map(it => {
+          const title = (it.title || '').replace(/\s*\((VOSTFR|Sub|VF)\)/i, '');
+          return { ...it, title: `${title} (VF)`, preferredVersion: 'vf' };
+        });
+      } else if (currentAnimeVersionFilter === 'vostfr') {
+        items = items.map(it => {
+          const title = (it.title || '').replace(/\s*\((VOSTFR|Sub|VF)\)/i, '');
+          return { ...it, title: `${title} (VOSTFR)`, preferredVersion: 'vostfr' };
+        });
+      }
 
       if (!append) grid.innerHTML = '';
       renderCards(grid, items);
@@ -2780,9 +2794,26 @@ function setupHostVideoSync() {
   video.addEventListener('seeked', () => broadcastSync('seek'));
 }
 
+function setupAnimeVersionFilters() {
+  const container = $('anime-version-filter-group');
+  if (!container) return;
+
+  const buttons = container.querySelectorAll('.sub-tab');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentAnimeVersionFilter = btn.dataset.version || 'all';
+      pages.anime = 1;
+      loadCategory('anime');
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   setupWatchParty();
   setupHostVideoSync();
+  setupAnimeVersionFilters();
 });
 
 // ─── Écran de Chargement Initial (Splash Screen) ───────────────

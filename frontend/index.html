@@ -142,8 +142,13 @@
 
       <!-- ── Section Anime ──────────────────────────────── -->
       <div id="cat-anime" class="category-section">
-        <div class="section-title-container">
+        <div class="section-title-container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;margin-bottom:20px;">
           <h2 class="section-title"><i class="fa-solid fa-dragon" style="color:var(--accent-purple)"></i> Catalogue Animes (VF & VOSTFR)</h2>
+          <div class="sub-tab-group" id="anime-version-filter-group">
+            <button class="sub-tab active" data-version="all"><i class="fa-solid fa-layer-group"></i> Tous (VF & VOSTFR)</button>
+            <button class="sub-tab" data-version="vf"><i class="fa-solid fa-flag"></i> 🇫🇷 VF</button>
+            <button class="sub-tab" data-version="vostfr"><i class="fa-solid fa-closed-captioning"></i> 🇯🇵 VOSTFR</button>
+          </div>
         </div>
         <div class="anime-grid" id="grid-anime"></div>
       </div>
