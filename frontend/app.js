@@ -813,17 +813,7 @@ async function loadCategory(cat, append = false) {
       loaded.manga = true;
 
     } else if (cat === 'anime') {
-      const countPerPage = 4;
-      const startIdx = ((pages.anime - 1) * countPerPage) % ANIME_QUERIES.length;
-      const batchQueries = [];
-      for (let i = 0; i < countPerPage; i++) {
-        batchQueries.push(ANIME_QUERIES[(startIdx + i) % ANIME_QUERIES.length]);
-      }
-
-      const resultsList = await Promise.all(
-        batchQueries.map(q => dcFetch('/search', { q, type: 'anime' }).catch(() => ({ results: [] })))
-      );
-
+      let combined = [];
       const seen = new Set();
       if (append && grid._seenIds) {
         grid._seenIds.forEach(id => seen.add(id));
@@ -831,27 +821,15 @@ async function loadCategory(cat, append = false) {
         grid._seenIds = new Set();
       }
 
-      const combined = [];
-
-      // 1. Ajouter le catalogue d'animes garanti
-      if (pages.anime === 1 && !append) {
-        POPULAR_ANIMES_CATALOG.forEach(a => {
-          if (!seen.has(a.id)) {
-            seen.add(a.id);
-            grid._seenIds.add(a.id);
-            combined.push(a);
-          }
-        });
-      }
-
-      // 2. Traiter et enrichir les résultats de recherche d'animes
-      resultsList.forEach(r => {
-        (r.results || []).forEach(item => {
+      if (currentAnimeSearchQuery) {
+        // Mode Recherche VoirAnime active
+        dataStatusBadge.textContent = `🔍 VoirAnime : "${currentAnimeSearchQuery}"…`;
+        const data = await dcFetch('/search', { q: currentAnimeSearchQuery, type: 'anime' }).catch(() => ({ results: [] }));
+        (data.results || []).forEach(item => {
           if (item && item.title && !seen.has(item.id || item.title)) {
             const animeId = item.id || item.title;
             seen.add(animeId);
             grid._seenIds.add(animeId);
-
             const slug = (item.title || animeId || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
             if (!item.poster || !item.poster.startsWith('http')) {
               item.poster = `https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/${slug}.jpg`;
@@ -860,25 +838,77 @@ async function loadCategory(cat, append = false) {
             combined.push(item);
           }
         });
-      });
+      } else {
+        // Mode Catalogue Standard + Chargement par lot
+        const countPerPage = 4;
+        const startIdx = ((pages.anime - 1) * countPerPage) % ANIME_QUERIES.length;
+        const batchQueries = [];
+        for (let i = 0; i < countPerPage; i++) {
+          batchQueries.push(ANIME_QUERIES[(startIdx + i) % ANIME_QUERIES.length]);
+        }
 
-      items = combined;
+        const resultsList = await Promise.all(
+          batchQueries.map(q => dcFetch('/search', { q, type: 'anime' }).catch(() => ({ results: [] })))
+        );
+
+        if (pages.anime === 1 && !append) {
+          POPULAR_ANIMES_CATALOG.forEach(a => {
+            if (!seen.has(a.id)) {
+              seen.add(a.id);
+              grid._seenIds.add(a.id);
+              combined.push(a);
+            }
+          });
+        }
+
+        resultsList.forEach(r => {
+          (r.results || []).forEach(item => {
+            if (item && item.title && !seen.has(item.id || item.title)) {
+              const animeId = item.id || item.title;
+              seen.add(animeId);
+              grid._seenIds.add(animeId);
+              const slug = (item.title || animeId || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+              if (!item.poster || !item.poster.startsWith('http')) {
+                item.poster = `https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/${slug}.jpg`;
+              }
+              if (!item.type) item.type = 'anime';
+              combined.push(item);
+            }
+          });
+        });
+      }
+
+      // Filtrer par genre si sélectionné
+      if (currentAnimeSelectedGenre && currentAnimeSelectedGenre !== 'all') {
+        const gLower = currentAnimeSelectedGenre.toLowerCase();
+        combined = combined.filter(it => {
+          const title = (it.title || '').toLowerCase();
+          const genres = (it.genres || []).map(g => (g.name || g).toLowerCase()).join(' ');
+          return title.includes(gLower) || genres.includes(gLower);
+        });
+      }
 
       // Filtrer selon la version sélectionnée (VF / VOSTFR / TOUS)
       if (currentAnimeVersionFilter === 'vf') {
-        items = items.map(it => {
+        combined = combined.map(it => {
           const title = (it.title || '').replace(/\s*\((VOSTFR|Sub|VF)\)/i, '');
           return { ...it, title: `${title} (VF)`, preferredVersion: 'vf' };
         });
       } else if (currentAnimeVersionFilter === 'vostfr') {
-        items = items.map(it => {
+        combined = combined.map(it => {
           const title = (it.title || '').replace(/\s*\((VOSTFR|Sub|VF)\)/i, '');
           return { ...it, title: `${title} (VOSTFR)`, preferredVersion: 'vostfr' };
         });
       }
 
+      items = combined;
+
       if (!append) grid.innerHTML = '';
-      renderCards(grid, items);
+      if (items.length === 0) {
+        grid.innerHTML = `<p style="grid-column:1/-1;color:var(--text-muted);padding:30px;text-align:center;">Aucun anime correspondant à votre recherche VoirAnime.</p>`;
+      } else {
+        renderCards(grid, items);
+      }
       loaded.anime = true;
 
       if (pages.anime === 1 && items.length > 0) setHero(items[0]);
@@ -2810,10 +2840,58 @@ function setupAnimeVersionFilters() {
   });
 }
 
+let currentAnimeSearchQuery = '';
+let currentAnimeSelectedGenre = 'all';
+
+function setupAnimeVoirAnimeSearch() {
+  const searchInput = $('anime-dedicated-search');
+  const resetBtn = $('anime-search-reset-btn');
+  const genreBar = $('anime-genre-pills-bar');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', e => {
+      clearTimeout(searchDebounce);
+      const q = e.target.value.trim();
+      currentAnimeSearchQuery = q;
+
+      if (resetBtn) resetBtn.style.display = q ? 'inline-flex' : 'none';
+
+      searchDebounce = setTimeout(() => {
+        pages.anime = 1;
+        loadCategory('anime');
+      }, 350);
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      currentAnimeSearchQuery = '';
+      resetBtn.style.display = 'none';
+      pages.anime = 1;
+      loadCategory('anime');
+    });
+  }
+
+  if (genreBar) {
+    const genreButtons = genreBar.querySelectorAll('.genre-pill');
+    genreButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        genreButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentAnimeSelectedGenre = btn.dataset.animeGenre || 'all';
+        pages.anime = 1;
+        loadCategory('anime');
+      });
+    });
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   setupWatchParty();
   setupHostVideoSync();
   setupAnimeVersionFilters();
+  setupAnimeVoirAnimeSearch();
 });
 
 // ─── Écran de Chargement Initial (Splash Screen) ───────────────
