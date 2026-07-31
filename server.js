@@ -825,7 +825,7 @@ app.get('/api/embed-proxy', async (req, res) => {
   function getProxiedUrl(targetUrl) {
     if (!targetUrl || typeof targetUrl !== 'string') return targetUrl;
     if (AD_RE.test(targetUrl)) return targetUrl;
-    if (targetUrl.startsWith('/api/proxy') || targetUrl.includes('/api/proxy?')) return targetUrl;
+    if (targetUrl.startsWith('/api/') || targetUrl.includes('/api/proxy') || targetUrl.includes('cdn-cgi/rum')) return targetUrl;
     if (targetUrl.startsWith('data:') || targetUrl.startsWith('blob:')) return targetUrl;
     try {
       var resolved = new URL(targetUrl, document.baseURI || window.location.href).href;
@@ -833,7 +833,7 @@ app.get('/api/embed-proxy', async (req, res) => {
         resolved = resolved.replace('http://', 'https://');
       }
       var parsed = new URL(resolved);
-      if (parsed.origin !== window.location.origin) {
+      if (parsed.origin !== window.location.origin && !parsed.hostname.includes('vidsrc')) {
         return '/api/proxy?url=' + encodeURIComponent(resolved) + '&referer=' + encodeURIComponent(EMBED_ORIGIN);
       }
     } catch(e) {}

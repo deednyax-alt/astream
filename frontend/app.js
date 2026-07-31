@@ -1893,10 +1893,22 @@ async function playStream(url) {
       video.play().catch(() => {});
     });
     hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-      const isExpired = data.response && (data.response.code === 403 || data.response.code === 404);
-      if (data.fatal || isExpired) {
+      if (data.fatal) {
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            console.warn('[HLS] Erreur réseau non-fatale, tentative de reconnexion...');
+            hlsInstance.startLoad();
+            return;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            console.warn('[HLS] Erreur média, ré-initialisation du décodeur...');
+            hlsInstance.recoverMediaError();
+            return;
+          default:
+            break;
+        }
+
         if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
-        console.warn('[HLS] Erreur flux HLS, basculement vers le miroir Embed...');
+        console.warn('[HLS] Erreur flux HLS fatale, basculement vers le miroir Embed...');
         const sources = streamSourceSelect?._sources || [];
         const fallback = sources.find(s => s.url !== url && isRealEmbedUrl(s.url));
         if (fallback) {
