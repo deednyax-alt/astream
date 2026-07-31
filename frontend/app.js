@@ -427,20 +427,21 @@ async function loadUpcomingMovies(grid) {
 
 // ─── Appel API DeadCow v1 (Direct & Proxy Serveur Automatique) ───
 async function dcFetch(endpoint, params = {}, options = {}) {
-  const { retries = 1, retryDelay = 1500, timeout = 35000 } = options;
+  const { retries = 2, retryDelay = 1000, timeout = 35000 } = options;
 
   let queryStr = `key=${API_KEY}`;
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== null) queryStr += `&${encodeURIComponent(k)}=${encodeURIComponent(v)}`;
   });
 
-  const directUrl = `${DC_API}${endpoint}?${queryStr}`;
   const proxyUrl  = `/api/dc-proxy${endpoint}?${queryStr}`;
+  const directUrl = `${DC_API}${endpoint}?${queryStr}`;
+  const targets   = [proxyUrl, directUrl, proxyUrl];
 
   let lastError;
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  for (let attempt = 0; attempt < targets.length && attempt <= retries; attempt++) {
     try {
-      const target = attempt === 0 ? directUrl : proxyUrl;
+      const target = targets[attempt];
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeout);
 
@@ -1515,7 +1516,7 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
     if (!targetId) throw new Error('ID cible invalide.');
     const params = { id: targetId, type: tType, episode, version: v };
     if (s !== undefined && s !== null) params.season = s;
-    const res = await dcFetch('/resolve', params, { retries: 0, timeout: timeoutMs });
+    const res = await dcFetch('/resolve', params, { retries: 2, timeout: timeoutMs });
 
     // Si embedUrl contient un fichier vidéo MP4/HLS direct (ex: citron-edge, mp4, m3u8), FORCER streamUrl vers embedUrl pour le Lecteur Principal
     if (res && res.embedUrl && (res.embedUrl.endsWith('.mp4') || res.embedUrl.endsWith('.m3u8') || res.embedUrl.includes('citron-edge') || res.embedUrl.includes('.mp4?'))) {
