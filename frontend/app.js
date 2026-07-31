@@ -7,6 +7,24 @@ const DC_API  = 'https://deadcow-streaming.lol/api/v1';
 window.NO_IMAGE_SVG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="280" viewBox="0 0 200 280"><rect width="200" height="280" fill="%23121420"/><text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" fill="%238b5cf6" font-family="sans-serif" font-size="18" font-weight="bold">astream</text><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="sans-serif" font-size="12">Image indisponible</text></svg>';
 const NO_IMAGE_SVG = window.NO_IMAGE_SVG;
 
+function normalizePosterUrl(poster, item = {}) {
+  if (!poster || poster === 'null' || poster === 'undefined' || typeof poster !== 'string' || poster.trim() === '') {
+    const slug = (item.title || item.name || item.id || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    if (slug && (item.type === 'anime' || item.isAnime)) {
+      return `https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/${slug}.jpg`;
+    }
+    return NO_IMAGE_SVG;
+  }
+  let clean = poster.trim();
+  if (clean.startsWith('/')) {
+    clean = `https://image.tmdb.org/t/p/w500${clean}`;
+  }
+  if (clean.startsWith('http://')) {
+    clean = clean.replace('http://', 'https://');
+  }
+  return clean;
+}
+
 // ─── État Global ─────────────────────────────────────────────
 let currentAnime   = null;
 let currentVersion = 'vf';
@@ -1020,11 +1038,12 @@ function renderCards(grid, items) {
     const rating = item.rating ? parseFloat(item.rating).toFixed(1) : '—';
     const genres = (item.genres || []).map(g => g.name || g).join(', ') || item.type || '—';
     const typeLabel = item.type ? item.type.toUpperCase() : '';
+    const posterSrc = normalizePosterUrl(item.poster, item);
 
     card.innerHTML = `
       <div class="card-img-container">
-        <img src="${item.poster || NO_IMAGE_SVG}" alt="${item.title}" loading="lazy"
-          onerror="this.onerror=null;this.src=window.NO_IMAGE_SVG">
+        <img src="${posterSrc}" alt="${item.title}" loading="lazy"
+          onerror="this.onerror=null;this.src=window.NO_IMAGE_SVG||'${NO_IMAGE_SVG}';">
         <span class="card-rating"><i class="fa-solid fa-star"></i> ${rating}</span>
         ${typeLabel ? `<span class="card-type-badge">${typeLabel}</span>` : ''}
       </div>
@@ -1108,7 +1127,12 @@ async function runSearch(q) {
 
   try {
     const data = await dcFetch('/search', { q, type: 'all' });
-    let items = (data.results || []).filter(r => r.poster);
+    let items = (data.results || []).filter(r => r && (r.title || r.name));
+
+    // Normaliser les affiches pour tous les résultats
+    items.forEach(it => {
+      it.poster = normalizePosterUrl(it.poster, it);
+    });
 
     // Trier les résultats de recherche par pertinence (titre exact, note TMDB & pertinence)
     const qLower = q.toLowerCase().trim();
@@ -1144,7 +1168,7 @@ function setHero(item) {
   heroRating.textContent   = item.rating ? parseFloat(item.rating).toFixed(1) : '—';
   heroGenres.textContent   = (item.genres || []).map(g => g.name || g).join(', ') || item.type || '';
   heroSynopsis.textContent = item.overview || item.synopsis || '';
-  const bg = item.backdrop || item.banner || item.poster || '';
+  const bg = normalizePosterUrl(item.backdrop || item.banner || item.poster, item);
   heroBanner.style.backgroundImage = `linear-gradient(to right,rgba(8,9,13,.97) 30%,rgba(8,9,13,.55) 65%,rgba(8,9,13,.1) 100%),url('${bg}')`;
   heroPlayBtn.onclick = () => openDetails(item, true);
   heroInfoBtn.onclick = () => openDetails(item, false);
@@ -1157,7 +1181,8 @@ async function openDetails(item, autoPlay = false) {
   modalRating.textContent   = item.rating ? parseFloat(item.rating).toFixed(1) : '—';
   modalGenres.textContent   = (item.genres || []).map(g => g.name || g).join(', ') || '';
   modalSynopsis.textContent = item.overview || item.synopsis || '';
-  modalBanner.style.backgroundImage = `url('${item.backdrop || item.poster}')`;
+  const bg = normalizePosterUrl(item.backdrop || item.poster, item);
+  modalBanner.style.backgroundImage = `url('${bg}')`;
   episodesTitle.innerHTML   = `<i class="fa-solid fa-list"></i> ${item.type === 'manga' ? 'Chapitres Manga' : 'Épisodes'}`;
   modalEpisodesGrid.innerHTML = `<div class="ep-loader"><div class="loader-spinner"></div><p>Chargement des éléments…</p></div>`;
   openModal(detailsModal);
