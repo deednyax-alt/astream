@@ -768,9 +768,32 @@ async function loadCategory(cat, append = false) {
       renderCards(grid, items);
       loaded.manga = true;
 
+// ─── Catalogue d'Animes Populaires Garanti ────────────────────
+const POPULAR_ANIMES_CATALOG = [
+  { id: 'https://anime-sama.to/catalogue/one-piece/', title: 'One Piece', type: 'anime', rating: 9.6, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/one-piece.jpg' },
+  { id: 'https://anime-sama.to/catalogue/dragon-ball-super/', title: 'Dragon Ball Super', type: 'anime', rating: 9.2, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/dragon-ball-super.jpg' },
+  { id: 'https://anime-sama.to/catalogue/dragon-ball-z/', title: 'Dragon Ball Z', type: 'anime', rating: 9.4, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/dragon-ball-z.jpg' },
+  { id: 'https://anime-sama.to/catalogue/naruto-shippuden/', title: 'Naruto Shippuden', type: 'anime', rating: 9.3, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/naruto-shippuden.jpg' },
+  { id: 'https://anime-sama.to/catalogue/demon-slayer/', title: 'Demon Slayer (Kimetsu no Yaiba)', type: 'anime', rating: 9.5, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/demon-slayer.jpg' },
+  { id: 'https://anime-sama.to/catalogue/attaque-des-titans/', title: 'L\'Attaque des Titans (Shingeki no Kyojin)', type: 'anime', rating: 9.6, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/attaque-des-titans.jpg' },
+  { id: 'https://anime-sama.to/catalogue/jujutsu-kaisen/', title: 'Jujutsu Kaisen', type: 'anime', rating: 9.4, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/jujutsu-kaisen.jpg' },
+  { id: 'https://anime-sama.to/catalogue/solo-leveling/', title: 'Solo Leveling', type: 'anime', rating: 9.5, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/solo-leveling0.jpg' },
+  { id: 'https://anime-sama.to/catalogue/my-hero-academia/', title: 'My Hero Academia', type: 'anime', rating: 8.9, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/my-hero-academia.jpg' },
+  { id: 'https://anime-sama.to/catalogue/hunter-x-hunter/', title: 'Hunter x Hunter', type: 'anime', rating: 9.5, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/hunter-x-hunter.jpg' },
+  { id: 'https://anime-sama.to/catalogue/bleach/', title: 'Bleach', type: 'anime', rating: 9.1, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/bleach.jpg' },
+  { id: 'https://anime-sama.to/catalogue/death-note/', title: 'Death Note', type: 'anime', rating: 9.3, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/death-note.jpg' },
+  { id: 'https://anime-sama.to/catalogue/black-clover/', title: 'Black Clover', type: 'anime', rating: 8.9, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/black-clover.jpg' },
+  { id: 'https://anime-sama.to/catalogue/chainsaw-man/', title: 'Chainsaw Man', type: 'anime', rating: 9.0, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/chainsaw-man.jpg' },
+  { id: 'https://anime-sama.to/catalogue/dandadan/', title: 'Dandadan', type: 'anime', rating: 9.2, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/dandadan.jpg' },
+  { id: 'https://anime-sama.to/catalogue/frieren/', title: 'Frieren: Beyond Journey\'s End', type: 'anime', rating: 9.6, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/frieren.jpg' },
+  { id: 'https://anime-sama.to/catalogue/kaiju-no-8/', title: 'Kaiju N°8', type: 'anime', rating: 8.8, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/kaiju-no-8.jpg' },
+  { id: 'https://anime-sama.to/catalogue/blue-lock/', title: 'Blue Lock', type: 'anime', rating: 9.0, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/blue-lock.jpg' },
+  { id: 'https://anime-sama.to/catalogue/vinland-saga/', title: 'Vinland Saga', type: 'anime', rating: 9.3, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/vinland-saga.jpg' },
+  { id: 'https://anime-sama.to/catalogue/dragon-ball-daima/', title: 'Dragon Ball Daima', type: 'anime', rating: 8.9, poster: 'https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/dragon-ball-daima.jpg' }
+];
+
     } else if (cat === 'anime') {
-      // Animes : Chargement par lot léger (3 requêtes à la fois) pour éviter la saturation API
-      const countPerPage = 3;
+      const countPerPage = 4;
       const startIdx = ((pages.anime - 1) * countPerPage) % ANIME_QUERIES.length;
       const batchQueries = [];
       for (let i = 0; i < countPerPage; i++) {
@@ -789,11 +812,31 @@ async function loadCategory(cat, append = false) {
       }
 
       const combined = [];
+
+      // 1. Ajouter le catalogue d'animes garanti
+      if (pages.anime === 1 && !append) {
+        POPULAR_ANIMES_CATALOG.forEach(a => {
+          if (!seen.has(a.id)) {
+            seen.add(a.id);
+            grid._seenIds.add(a.id);
+            combined.push(a);
+          }
+        });
+      }
+
+      // 2. Traiter et enrichir les résultats de recherche d'animes
       resultsList.forEach(r => {
         (r.results || []).forEach(item => {
-          if (item.poster && !seen.has(item.id)) {
-            seen.add(item.id);
-            grid._seenIds.add(item.id);
+          if (item && item.title && !seen.has(item.id || item.title)) {
+            const animeId = item.id || item.title;
+            seen.add(animeId);
+            grid._seenIds.add(animeId);
+
+            const slug = (item.title || animeId || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            if (!item.poster || !item.poster.startsWith('http')) {
+              item.poster = `https://raw.githubusercontent.com/Anime-Sama/IMG/img/contenu/${slug}.jpg`;
+            }
+            if (!item.type) item.type = 'anime';
             combined.push(item);
           }
         });
