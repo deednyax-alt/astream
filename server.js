@@ -532,7 +532,7 @@ app.use('/api/dc-proxy', async (req, res) => {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       },
-      timeout: 35000
+      timeout: 10000
     });
 
     res.status(response.status).json(response.data);
@@ -540,7 +540,7 @@ app.use('/api/dc-proxy', async (req, res) => {
     if (err.response) {
       res.status(err.response.status).json(err.response.data);
     } else {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(200).json({ success: false, error: err.message || 'Timeout' });
     }
   }
 });
