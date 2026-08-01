@@ -2887,11 +2887,56 @@ function setupAnimeVoirAnimeSearch() {
   }
 }
 
+function setupWelcomeModal() {
+  const welcomeModal = $('welcome-onboarding-modal');
+  const closeBtn     = $('close-welcome-modal-btn');
+  const loginBtn     = $('welcome-login-btn');
+  const regBtn       = $('welcome-register-btn');
+  const laterBtn     = $('welcome-later-btn');
+
+  if (!welcomeModal) return;
+
+  const closeWelcome = () => {
+    closeModal(welcomeModal);
+  };
+
+  if (closeBtn) closeBtn.addEventListener('click', closeWelcome);
+  if (laterBtn) laterBtn.addEventListener('click', closeWelcome);
+
+  if (loginBtn) {
+    loginBtn.addEventListener('click', () => {
+      closeWelcome();
+      const authModal = $('auth-modal');
+      const loginTab = $('auth-tab-login');
+      if (loginTab) loginTab.click();
+      if (authModal) openModal(authModal);
+    });
+  }
+
+  if (regBtn) {
+    regBtn.addEventListener('click', () => {
+      closeWelcome();
+      const authModal = $('auth-modal');
+      const regTab = $('auth-tab-register');
+      if (regTab) regTab.click();
+      if (authModal) openModal(authModal);
+    });
+  }
+
+  // Déclencher l'affichage automatique 900ms après l'arrivée sur le site
+  setTimeout(() => {
+    if (!localStorage.getItem('japoplay_user')) {
+      openModal(welcomeModal);
+    }
+  }, 900);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   setupWatchParty();
   setupHostVideoSync();
   setupAnimeVersionFilters();
   setupAnimeVoirAnimeSearch();
+  setupWelcomeModal();
 });
 
 // ─── Écran de Chargement Initial (Splash Screen) ───────────────

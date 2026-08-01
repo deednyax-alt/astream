@@ -562,6 +562,57 @@
     </div>
   </div>
 
+  <!-- ══ MODAL DE BIENVENUE & ONBOARDING (WELCOME MODAL) ═════ -->
+  <div id="welcome-onboarding-modal" class="modal">
+    <div class="modal-content glass" style="max-width:500px;text-align:center;padding:32px 28px;border:1px solid rgba(168,85,247,0.35);box-shadow:0 0 50px rgba(139,92,246,0.3);">
+      <span class="close-btn" id="close-welcome-modal-btn">&times;</span>
+      
+      <div style="width:72px;height:72px;margin:0 auto 18px auto;background:linear-gradient(135deg,var(--accent-purple),var(--accent-cyan));border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(168,85,247,0.5)">
+        <i class="fa-solid fa-wand-magic-sparkles" style="font-size:2rem;color:#fff"></i>
+      </div>
+
+      <h2 style="font-size:1.6rem;color:#fff;margin-bottom:8px;font-family:'Outfit',sans-serif;font-weight:800;">
+        Bienvenue sur <span class="gradient-text">JapoPlay</span> ! 🎉
+      </h2>
+      <p style="color:var(--text-muted);font-size:0.92rem;margin-bottom:22px;line-height:1.5;">
+        Votre destination premium pour regarder vos Animes, Séries TV, Films & Mangas en HD sans publicité.
+      </p>
+
+      <div style="background:rgba(8,9,13,0.6);border-radius:14px;padding:16px 20px;margin-bottom:24px;text-align:left;border:1px solid rgba(255,255,255,0.08);">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+          <i class="fa-solid fa-circle-check" style="color:#10b981;font-size:1.1rem"></i>
+          <span style="color:#e2e8f0;font-size:0.88rem;font-weight:500;">Accès illimité à tous les Animes (VF & VOSTFR)</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+          <i class="fa-solid fa-circle-check" style="color:#10b981;font-size:1.1rem"></i>
+          <span style="color:#e2e8f0;font-size:0.88rem;font-weight:500;">Lecteur Vidéo HD ultra-rapide avec auto-enchaînement</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+          <i class="fa-solid fa-circle-check" style="color:#10b981;font-size:1.1rem"></i>
+          <span style="color:#e2e8f0;font-size:0.88rem;font-weight:500;">Watch Party en temps réel avec tchat entre amis</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <i class="fa-solid fa-circle-check" style="color:#10b981;font-size:1.1rem"></i>
+          <span style="color:#e2e8f0;font-size:0.88rem;font-weight:500;">Sauvegarde de votre historique & favoris</span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;gap:10px;">
+          <button id="welcome-login-btn" class="btn btn-secondary" style="flex:1;padding:12px;font-size:0.9rem;">
+            <i class="fa-solid fa-right-to-bracket"></i> Se Connecter
+          </button>
+          <button id="welcome-register-btn" class="btn btn-primary" style="flex:1;padding:12px;font-size:0.9rem;">
+            <i class="fa-solid fa-user-plus"></i> Créer un Compte
+          </button>
+        </div>
+        <button id="welcome-later-btn" class="glass-btn" style="width:100%;padding:11px;font-size:0.88rem;color:var(--text-muted);border-color:rgba(255,255,255,0.15);">
+          <i class="fa-solid fa-clock"></i> Plus tard / Continuer en invité
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ MODAL CONNEXION & INSCRIPTION (AUTH MODAL) ════════ -->
   <div id="auth-modal" class="modal">
     <div class="modal-content glass" style="max-width:440px">
