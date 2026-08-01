@@ -939,89 +939,41 @@ async function loadCategory(cat, append = false) {
   }
 }
 
-// ─── Catalogue de Secours Local (Anti-Écran Vide / Anti-Cloudflare 530) ───
+// ─── Catalogue de Secours Local Riche (Anti-Écran Vide / Anti-Cloudflare 530) ───
 async function getFallbackCatalogItems(cat) {
-  try {
-    const res = await fetch('/mockData.json');
-    if (res.ok) {
-      const mockList = await res.json();
-      if (Array.isArray(mockList) && mockList.length > 0) {
-        return mockList.map(m => ({
-          id: m.id,
-          title: m.title,
-          poster: m.image,
-          banner: m.banner,
-          synopsis: m.synopsis,
-          voteAverage: m.rating,
-          type: cat === 'movie' ? 'movie' : (cat === 'tv' ? 'tv' : 'anime'),
-          episodes: m.episodes
-        }));
-      }
-    }
-  } catch(e) {}
-
-  return [
-    {
-      id: 'demon-slayer',
-      title: 'Demon Slayer: Kimetsu no Yaiba',
-      poster: 'https://cdn.myanimelist.net/images/anime/1286/99889.jpg',
-      banner: 'https://images5.alphacoders.com/102/1027170.jpg',
-      synopsis: 'Tanjirou devient un tueur de démons pour venger sa famille et guérir sa sœur Nezuko.',
-      voteAverage: 8.7,
-      type: 'anime'
-    },
-    {
-      id: 'attack-on-titan',
-      title: 'L\'Attaque des Titans',
-      poster: 'https://cdn.myanimelist.net/images/anime/10/47347.jpg',
-      banner: 'https://images2.alphacoders.com/508/508608.jpg',
-      synopsis: 'Eren Jäger combat les Titans géants mangeurs d\'hommes pour sauver l\'humanité.',
-      voteAverage: 9.1,
-      type: 'anime'
-    },
-    {
-      id: 'solo-leveling',
-      title: 'Solo Leveling',
-      poster: 'https://image.tmdb.org/t/p/w500/v7xmSCuGqVwSHfXkjAgZEEtl1Gr.jpg',
-      banner: 'https://image.tmdb.org/t/p/original/m91f3a2iN0N7G77lW.jpg',
-      synopsis: 'Sung Jinwoo, le plus faible des chasseurs, gagne le pouvoir de monter de niveau sans limite.',
-      voteAverage: 8.8,
-      type: 'anime'
-    },
-    {
-      id: 'one-piece',
-      title: 'One Piece',
-      poster: 'https://cdn.myanimelist.net/images/anime/6/73245.jpg',
-      synopsis: 'Luffy et son équipage naviguent sur Grand Line à la recherche du trésor légendaire.',
-      voteAverage: 8.9,
-      type: 'anime'
-    },
-    {
-      id: 'jujutsu-kaisen',
-      title: 'Jujutsu Kaisen',
-      poster: 'https://cdn.myanimelist.net/images/anime/1171/109222.jpg',
-      synopsis: 'Yuji Itadori avale un doigt maudit et intègre l\'école d\'exorcisme de Tokyo.',
-      voteAverage: 8.7,
-      type: 'anime'
-    },
-    {
-      id: 'the-batman',
-      title: 'The Batman',
-      poster: 'https://image.tmdb.org/t/p/w500/1rHd9eNvhQO3ueVuK8WC06VQXG9.jpg',
-      synopsis: 'Batman enquête sur la corruption à Gotham City et traque le Riddler.',
-      voteAverage: 8.5,
-      type: 'movie'
-    },
-    {
-      id: 'spider-man-brand-new-day',
-      title: 'Spider-Man: Brand New Day (2026)',
-      poster: 'https://image.tmdb.org/t/p/w500/vPBy6cDPYMcj35lpl3W5kPEc2OB.jpg',
-      synopsis: 'Le nouveau chapitre très attendu des aventures de Spider-Man.',
-      voteAverage: 9.0,
-      year: '2026',
-      type: 'movie'
-    }
+  const movies = [
+    { id: '268', title: 'The Batman', poster: 'https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg', banner: 'https://image.tmdb.org/t/p/original/b0Plmy2xK0i9Vn9jG5yB2gq33ob.jpg', synopsis: 'Batman traque le Riddler qui sème la terreur à Gotham City.', voteAverage: 8.5, type: 'movie', year: '2022' },
+    { id: 'spider-man-brand-new-day', title: 'Spider-Man: Brand New Day (2026)', poster: 'https://image.tmdb.org/t/p/w500/vPBy6cDPYMcj35lpl3W5kPEc2OB.jpg', banner: 'https://image.tmdb.org/t/p/original/yDHYTfA3R0jFYba16jBB1u8jZl.jpg', synopsis: 'Le nouveau chapitre très attendu des aventures de Spider-Man.', voteAverage: 9.0, type: 'movie', year: '2026' },
+    { id: '533535', title: 'Deadpool & Wolverine', poster: 'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg', banner: 'https://image.tmdb.org/t/p/original/yDHYTfA3R0jFYba16jBB1u8jZl.jpg', synopsis: 'Wade Wilson s\'associe à un Wolverine réticent pour sauver son univers.', voteAverage: 8.7, type: 'movie', year: '2024' },
+    { id: '693134', title: 'Dune : Deuxième Partie', poster: 'https://image.tmdb.org/t/p/w500/6vF39k7b0d5hWbA7b0hW5c75V.jpg', banner: 'https://image.tmdb.org/t/p/original/xOMo8ScSuBmuGNnShk2u91VGg2.jpg', synopsis: 'Paul Atreides s\'unit à Chani et aux Fremen pour se venger des conspirateurs.', voteAverage: 8.9, type: 'movie', year: '2024' },
+    { id: '76600', title: 'Avatar : La Voie de l\'Eau', poster: 'https://image.tmdb.org/t/p/w500/t6HIw3zMMGlUZv78i5dY88vKGvG.jpg', banner: 'https://image.tmdb.org/t/p/original/s16H6vEUW8sPPG9oFi16ws8uA4h.jpg', synopsis: 'Jake Sully et Neytiri forment une famille et explorèrent les régions de Pandora.', voteAverage: 8.2, type: 'movie', year: '2022' },
+    { id: '872585', title: 'Oppenheimer', poster: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg', banner: 'https://image.tmdb.org/t/p/original/fm6KqXpk3M2HVveHwCrBSSBaO0f.jpg', synopsis: 'L\'histoire du physicien J. Robert Oppenheimer et du projet Manhattan.', voteAverage: 8.9, type: 'movie', year: '2023' },
+    { id: '157336', title: 'Interstellar', poster: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg', banner: 'https://image.tmdb.org/t/p/original/xJHokMbljvjADYdit5fK5VQsX2f.jpg', synopsis: 'Une équipe d\'explorateurs voyage à travers un trou de ver pour sauver l\'humanité.', voteAverage: 8.6, type: 'movie', year: '2014' },
+    { id: '550', title: 'Fight Club', poster: 'https://image.tmdb.org/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg', banner: 'https://image.tmdb.org/t/p/original/hZkgoQY85KGdfW2hBxigUZMKxA5.jpg', synopsis: 'Un employé de bureau insomniaque et un fabricant de savon forment un club de combat.', voteAverage: 8.8, type: 'movie', year: '1999' }
   ];
+
+  const series = [
+    { id: '1399', title: 'Game of Thrones', poster: 'https://image.tmdb.org/t/p/w500/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg', banner: 'https://image.tmdb.org/t/p/original/2OMB0ynKlyIenMJWI2Dy9IFAld.jpg', synopsis: 'Neuf familles nobles luttent pour le contrôle des terres de Westeros.', voteAverage: 8.4, type: 'tv' },
+    { id: '60625', title: 'Rick et Morty', poster: 'https://image.tmdb.org/t/p/w500/gdIrmf2DdY2Z4FzA2lZ6mN5Vp4s.jpg', banner: 'https://image.tmdb.org/t/p/original/mzzHY4VJ2WhV1Dp23Z6yV2v16x.jpg', synopsis: 'Les mésaventures d\'un scientifique cynique et de son petit-fils influençable.', voteAverage: 8.7, type: 'tv' },
+    { id: '66732', title: 'Stranger Things', poster: 'https://image.tmdb.org/t/p/w500/49WJfeN0moxb9IPfGn88qbuYh9C.jpg', banner: 'https://image.tmdb.org/t/p/original/56v2Kj2E52m32Q1mG1l9yV600e.jpg', synopsis: 'Quand un jeune garçon disparaît, une petite ville découvre un mystère surnaturel.', voteAverage: 8.6, type: 'tv' },
+    { id: '94997', title: 'House of the Dragon', poster: 'https://image.tmdb.org/t/p/w500/z2y41Oi2Tj9gH32cZ9rQ3u1u3y8.jpg', banner: 'https://image.tmdb.org/t/p/original/etj8E2o0uR0E2o0uR0E2o0uR0E2.jpg', synopsis: 'L\'histoire de la maison Targaryen 200 ans avant les événements de Game of Thrones.', voteAverage: 8.4, type: 'tv' },
+    { id: '100088', title: 'The Last of Us', poster: 'https://image.tmdb.org/t/p/w500/uKvVjQDig27iYvGv07mQ2BvC45u.jpg', banner: 'https://image.tmdb.org/t/p/original/uDgy6hyPd82622iN8522g32x8u.jpg', synopsis: 'Joel et Ellie traversent les États-Unis ravagés par un champignon parasite.', voteAverage: 8.6, type: 'tv' },
+    { id: '1396', title: 'Breaking Bad', poster: 'https://image.tmdb.org/t/p/w500/ggFHVY12W15C5Z4y876Wv05H0lI.jpg', banner: 'https://image.tmdb.org/t/p/original/tsRy63MuZvKCawYHR2bA5CgW6P6.jpg', synopsis: 'Un professeur de chimie atteint d\'un cancer se lance dans la fabrication de méthamphétamine.', voteAverage: 8.9, type: 'tv' }
+  ];
+
+  const animes = [
+    { id: 'demon-slayer', title: 'Demon Slayer: Kimetsu no Yaiba', poster: 'https://cdn.myanimelist.net/images/anime/1286/99889.jpg', banner: 'https://images5.alphacoders.com/102/1027170.jpg', synopsis: 'Tanjirou devient un tueur de démons pour venger sa famille et guérir sa sœur Nezuko.', voteAverage: 8.7, type: 'anime' },
+    { id: 'attack-on-titan', title: 'L\'Attaque des Titans', poster: 'https://cdn.myanimelist.net/images/anime/10/47347.jpg', banner: 'https://images2.alphacoders.com/508/508608.jpg', synopsis: 'Eren Jäger combat les Titans géants mangeurs d\'hommes pour sauver l\'humanité.', voteAverage: 9.1, type: 'anime' },
+    { id: 'solo-leveling', title: 'Solo Leveling', poster: 'https://image.tmdb.org/t/p/w500/v7xmSCuGqVwSHfXkjAgZEEtl1Gr.jpg', banner: 'https://image.tmdb.org/t/p/original/m91f3a2iN0N7G77lW.jpg', synopsis: 'Sung Jinwoo, le plus faible des chasseurs, gagne le pouvoir de monter de niveau sans limite.', voteAverage: 8.8, type: 'anime' },
+    { id: 'one-piece', title: 'One Piece', poster: 'https://cdn.myanimelist.net/images/anime/6/73245.jpg', synopsis: 'Luffy et son équipage naviguent sur Grand Line à la recherche du trésor légendaire.', voteAverage: 8.9, type: 'anime' },
+    { id: 'jujutsu-kaisen', title: 'Jujutsu Kaisen', poster: 'https://cdn.myanimelist.net/images/anime/1171/109222.jpg', synopsis: 'Yuji Itadori avale un doigt maudit et intègre l\'école d\'exorcisme de Tokyo.', voteAverage: 8.7, type: 'anime' },
+    { id: 'naruto-shippuden', title: 'Naruto Shippuden', poster: 'https://cdn.myanimelist.net/images/anime/5/17407.jpg', synopsis: 'Naruto Uzumaki s\'entraîne sans relâche pour devenir Hokage et ramener Sasuke.', voteAverage: 8.6, type: 'anime' }
+  ];
+
+  if (cat === 'movie') return movies;
+  if (cat === 'tv') return series;
+  if (cat === 'anime') return animes;
+  return [...movies.slice(0, 4), ...series.slice(0, 4), ...animes.slice(0, 4)];
 }
 
 // ─── Système de Pagination Dynamique par Onglets ──────────────────
