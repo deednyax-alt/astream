@@ -1795,7 +1795,7 @@ function buildSourceSelector(data) {
   const curEp = data?.episode || currentAnime?.episode || 1;
   const curSeason = data?.season || currentAnime?.season || 1;
 
-  // 5. Sources alternatives universelles TMDB (VidSrc, SuperEmbed, SmashyStream)
+  // 5. Sources alternatives universelles TMDB (VidSrc.me, VidSrc.cc, VidSrc.pro)
   if (numericTmdb) {
     const vidsrcUrl = currentAnime?.type === 'movie'
       ? `https://vidsrc.me/embed/movie?tmdb=${numericTmdb}`
@@ -1811,11 +1811,11 @@ function buildSourceSelector(data) {
       sources.push({ name: '⚡ Lecteur Miroir 3 (SuperEmbed 1080p)', url: vidsrcCcUrl });
     }
 
-    const smashyUrl = currentAnime?.type === 'movie'
-      ? `https://player.smashystream.com/movie/${numericTmdb}`
-      : `https://player.smashystream.com/tv/${numericTmdb}?s=${curSeason}&e=${curEp}`;
-    if (!sources.some(s => s.url === smashyUrl)) {
-      sources.push({ name: '▶ Lecteur Miroir 4 (SmashyStream HD)', url: smashyUrl });
+    const vidsrcProUrl = currentAnime?.type === 'movie'
+      ? `https://vidsrc.pro/embed/movie/${numericTmdb}`
+      : `https://vidsrc.pro/embed/tv/${numericTmdb}/${curSeason}/${curEp}`;
+    if (!sources.some(s => s.url === vidsrcProUrl)) {
+      sources.push({ name: '▶ Lecteur Miroir 4 (VidSrc Pro HD)', url: vidsrcProUrl });
     }
   }
 
