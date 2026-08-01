@@ -508,7 +508,7 @@ app.post('/api/maintenance/toggle', (req, res) => {
 });
 
 // ─── Proxy Serveur Automatique vers l'API Officielle DeadCow ──
-const DEADCOW_KEY = process.env.DEADCOW_API_KEY || 'dc_live_8226b97d0d55d7e6b87a15e6';
+const DEADCOW_KEY = process.env.DEADCOW_API_KEY || 'dc_live_37a301e9604371001699f0b3';
 
 app.use('/api/dc-proxy', async (req, res) => {
   try {
