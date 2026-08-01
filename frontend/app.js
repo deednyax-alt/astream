@@ -1584,15 +1584,9 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
     const numericSeason = parseInt(season, 10) || 1;
 
     let cleanId = primaryId || cleanSlug || slugFromTitle || '';
-    if (typeof cleanId === 'string' && cleanId.startsWith('http')) {
-      try {
-        const u = new URL(cleanId);
-        const parts = u.pathname.split('/').filter(Boolean);
-        let rawPart = parts[parts.length - 1] || slugFromTitle;
-        cleanId = decodeURIComponent(rawPart).toLowerCase().replace(/\s*\(\d{4}\)/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      } catch(e) {
-        cleanId = slugFromTitle;
-      }
+    if (typeof cleanId === 'string') {
+      cleanId = cleanId.replace(/^.*film[\/%]/i, '').replace(/^.*catalogue[\/%]/i, '').replace(/^https?:\/\/[^\/]+[\/%]/i, '');
+      cleanId = decodeURIComponent(cleanId).toLowerCase().replace(/\s*\(\d{4}\)/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     }
 
     // Tenter de récupérer les lecteurs via l'API Officielle DeadCow (movie/stream & resolve)
@@ -1626,19 +1620,7 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
       console.warn('[Resolve] Primary fetch timeout/failed, switching to instant fallback...');
     }
 
-    // Fallback si l'endpoint principal de DeadCow retourne une liste vide pour les séries/animes
-    if (!data || !data.success || (!data.streamUrl && !data.embedUrl && (!data.players || data.players.length === 0))) {
-      if (type === 'movie') {
-        const altEndpoint = `/api/dc-proxy/resolve?id=${encodeURIComponent(cleanSlug || primaryId)}&type=movie&season=1&episode=1&version=${encodeURIComponent(currentVersion)}`;
-        try {
-          const altRes = await fetch(altEndpoint);
-          if (altRes.ok) {
-            const altData = await altRes.json();
-            if (altData && (altData.streamUrl || altData.embedUrl || altData.players)) data = altData;
-          }
-        } catch(e) {}
-      }
-    }
+
 
     // Détecter si c'est un film non encore sorti au cinéma (ex: Spider-Man Brand New Day 2026)
     const isNoStreamFound = !data || (!data.streamUrl && (!data.players || data.players.length === 0));
