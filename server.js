@@ -747,7 +747,7 @@ app.get('/api/embed-proxy', async (req, res) => {
           (function() {
             var origOpen = XMLHttpRequest.prototype.open;
             XMLHttpRequest.prototype.open = function(method, url) {
-              if (url && typeof url === 'string' && (url.startsWith('http') || url.startsWith('//')) && !url.includes('/api/proxy')) {
+              if (url && typeof url === 'string' && (url.startsWith('http') || url.startsWith('//')) && !url.startsWith('/api/proxy') && !url.startsWith(window.location.origin + '/api/proxy')) {
                 var fullUrl = url.startsWith('//') ? 'https:' + url : url;
                 url = '/api/proxy?url=' + encodeURIComponent(fullUrl);
               }
@@ -757,7 +757,7 @@ app.get('/api/embed-proxy', async (req, res) => {
             if (origFetch) {
               window.fetch = function(input, init) {
                 var url = (typeof input === 'string') ? input : (input && input.url ? input.url : input);
-                if (url && typeof url === 'string' && (url.startsWith('http') || url.startsWith('//')) && !url.includes('/api/proxy')) {
+                if (url && typeof url === 'string' && (url.startsWith('http') || url.startsWith('//')) && !url.startsWith('/api/proxy') && !url.startsWith(window.location.origin + '/api/proxy')) {
                   var fullUrl = url.startsWith('//') ? 'https:' + url : url;
                   var proxyUrl = '/api/proxy?url=' + encodeURIComponent(fullUrl);
                   if (typeof input === 'string') input = proxyUrl;
