@@ -1833,6 +1833,11 @@ footer i {
   margin-bottom: 24px;
 }
 
+#anime-dedicated-search:focus {
+  border-color: var(--accent-purple) !important;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.3);
+}
+
 .loader-progress-fill {
   height: 100%;
   width: 0%;
