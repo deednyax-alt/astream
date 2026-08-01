@@ -1792,25 +1792,28 @@ function buildSourceSelector(data) {
     });
   }
 
+  const curEp = data?.episode || currentAnime?.episode || 1;
+  const curSeason = data?.season || currentAnime?.season || 1;
+
   // 5. Sources alternatives universelles TMDB (VidSrc, SuperEmbed, SmashyStream)
   if (numericTmdb) {
     const vidsrcUrl = currentAnime?.type === 'movie'
       ? `https://vidsrc.me/embed/movie?tmdb=${numericTmdb}`
-      : `https://vidsrc.me/embed/tv?tmdb=${numericTmdb}&season=${episode ? (currentAnime?.season || 1) : 1}&episode=${episode || 1}`;
+      : `https://vidsrc.me/embed/tv?tmdb=${numericTmdb}&season=${curSeason}&episode=${curEp}`;
     if (!sources.some(s => s.url === vidsrcUrl)) {
       sources.push({ name: '🎬 Lecteur Secours HD (VidSrc)', url: vidsrcUrl });
     }
 
     const vidsrcCcUrl = currentAnime?.type === 'movie'
       ? `https://vidsrc.cc/v2/embed/movie/${numericTmdb}`
-      : `https://vidsrc.cc/v2/embed/tv/${numericTmdb}/${currentAnime?.season || 1}/${episode || 1}`;
+      : `https://vidsrc.cc/v2/embed/tv/${numericTmdb}/${curSeason}/${curEp}`;
     if (!sources.some(s => s.url === vidsrcCcUrl)) {
       sources.push({ name: '⚡ Lecteur Miroir 3 (SuperEmbed 1080p)', url: vidsrcCcUrl });
     }
 
     const smashyUrl = currentAnime?.type === 'movie'
       ? `https://player.smashystream.com/movie/${numericTmdb}`
-      : `https://player.smashystream.com/tv/${numericTmdb}?s=${currentAnime?.season || 1}&e=${episode || 1}`;
+      : `https://player.smashystream.com/tv/${numericTmdb}?s=${curSeason}&e=${curEp}`;
     if (!sources.some(s => s.url === smashyUrl)) {
       sources.push({ name: '▶ Lecteur Miroir 4 (SmashyStream HD)', url: smashyUrl });
     }
