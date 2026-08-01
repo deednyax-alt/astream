@@ -2884,12 +2884,35 @@ function setupWelcomeModal() {
   }, 900);
 }
 
+// ─── Shield Ad-Block & Anti-Redirection ─────────────────────────
+function initAdBlockPopUpShield() {
+  const nativeOpen = window.open;
+  window.open = function(...args) {
+    const playerModal = $('player-modal');
+    if (playerModal && playerModal.style.display !== 'none' && playerModal.classList.contains('active')) {
+      console.warn('[Ad-Block Shield] Pop-up pub bloquée avec succès !');
+      return null;
+    }
+    return nativeOpen.apply(this, args);
+  };
+
+  window.addEventListener('beforeunload', (e) => {
+    const playerModal = $('player-modal');
+    if (playerModal && playerModal.style.display !== 'none' && playerModal.classList.contains('active')) {
+      console.warn('[Ad-Block Shield] Rédirection pub bloquée avec succès !');
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   setupWatchParty();
   setupHostVideoSync();
   setupAnimeVersionFilters();
   setupAnimeVoirAnimeSearch();
   setupWelcomeModal();
+  initAdBlockPopUpShield();
 });
 
 // ─── Écran de Chargement Initial (Splash Screen) ───────────────
