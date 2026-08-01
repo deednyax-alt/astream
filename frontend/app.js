@@ -1936,13 +1936,18 @@ async function playStream(url) {
       videoLoader.classList.remove('active');
       video.play().catch(() => {});
     });
+    let hlsNetworkRetryCount = 0;
     hlsInstance.on(Hls.Events.ERROR, (event, data) => {
       if (data.fatal) {
         switch (data.type) {
           case Hls.ErrorTypes.NETWORK_ERROR:
-            console.warn('[HLS] Erreur réseau non-fatale, tentative de reconnexion...');
-            hlsInstance.startLoad();
-            return;
+            if (hlsNetworkRetryCount < 3) {
+              hlsNetworkRetryCount++;
+              console.warn(`[HLS] Erreur réseau (tentative ${hlsNetworkRetryCount}/3), reconnexion...`);
+              setTimeout(() => { if (hlsInstance) hlsInstance.startLoad(); }, 800);
+              return;
+            }
+            break;
           case Hls.ErrorTypes.MEDIA_ERROR:
             console.warn('[HLS] Erreur média, ré-initialisation du décodeur...');
             hlsInstance.recoverMediaError();
