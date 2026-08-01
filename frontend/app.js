@@ -822,8 +822,8 @@ async function loadCategory(cat, append = false) {
       }
 
       if (currentAnimeSearchQuery) {
-        // Mode Recherche VoirAnime active
-        dataStatusBadge.textContent = `🔍 VoirAnime : "${currentAnimeSearchQuery}"…`;
+        // Mode Recherche Anime active
+        dataStatusBadge.textContent = `🔍 Recherche Anime : "${currentAnimeSearchQuery}"…`;
         const data = await dcFetch('/search', { q: currentAnimeSearchQuery, type: 'anime' }).catch(() => ({ results: [] }));
         (data.results || []).forEach(item => {
           if (item && item.title && !seen.has(item.id || item.title)) {
@@ -905,7 +905,7 @@ async function loadCategory(cat, append = false) {
 
       if (!append) grid.innerHTML = '';
       if (items.length === 0) {
-        grid.innerHTML = `<p style="grid-column:1/-1;color:var(--text-muted);padding:30px;text-align:center;">Aucun anime correspondant à votre recherche VoirAnime.</p>`;
+        grid.innerHTML = `<p style="grid-column:1/-1;color:var(--text-muted);padding:30px;text-align:center;">Aucun anime correspondant à votre recherche.</p>`;
       } else {
         renderCards(grid, items);
       }
