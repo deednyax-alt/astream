@@ -1582,68 +1582,46 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
     const slugFromTitle = titleClean.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
     const numericSeason = parseInt(season, 10) || 1;
-    const candidateConfigs = [];
 
-    if (/^\d+$/.test(String(cleanSlug))) {
-      candidateConfigs.push({ id: cleanSlug, version: currentVersion, season: numericSeason, tType: type });
+    // Tenter de récupérer les lecteurs via l'API Officielle DeadCow (movie/stream & resolve)
+    let apiEndpoint = '';
+    if (type === 'movie') {
+      const titleQuery = currentAnime?.title || 'Film';
+      apiEndpoint = `/api/dc-proxy/movie/stream?title=${encodeURIComponent(titleQuery)}&tmdbId=${encodeURIComponent(primaryId || cleanSlug || '')}`;
     } else {
-      candidateConfigs.push({ id: cleanSlug, version: currentVersion, season: numericSeason, tType: type });
-      candidateConfigs.push({ id: cleanSlug, version: currentVersion, season: undefined, tType: type });
+      let resolveType = type || (isAnime ? 'anime' : 'tv');
+      apiEndpoint = `/api/dc-proxy/resolve?id=${encodeURIComponent(cleanSlug || primaryId)}&type=${encodeURIComponent(resolveType)}&season=${encodeURIComponent(numericSeason)}&episode=${encodeURIComponent(episode)}&version=${encodeURIComponent(currentVersion)}`;
     }
 
-    if (titleClean.includes('foot 2 rue') || cleanSlug.includes('foot-2-rue')) {
-      candidateConfigs.push({ id: '65141', version: currentVersion, season: numericSeason, tType: 'tv' });
-      candidateConfigs.push({ id: '294129', version: currentVersion, season: numericSeason, tType: 'tv' });
-    }
-
-    if (slugFromTitle && slugFromTitle !== cleanSlug) {
-      candidateConfigs.push({ id: slugFromTitle, version: currentVersion, season: numericSeason, tType: type });
-    }
-
-    for (const cfg of candidateConfigs) {
-      if (!cfg.id) continue;
-      try {
-        const res = await attemptFetch(cfg.id, cfg.version, cfg.season, cfg.tType || type, 4000);
-        if (res && res.success && (res.streamUrl || res.embedUrl)) {
-          data = res;
-          break; // Succès ! Arrêt immédiat
-        }
-      } catch (eSeq) {}
-    }
-
-    // Fast-path 2 : Recherche de secours via Titre TMDB si nécessaire
-    if ((!data || !data.success || (!data.streamUrl && !data.embedUrl)) && (currentAnime?.title || typeof primaryId === 'string')) {
-      let rawTitle = currentAnime?.title || cleanSlug;
-      if (typeof rawTitle === 'string') {
-        rawTitle = rawTitle.replace(/^.*\/film\//, '').replace(/%20/g, ' ').replace(/\s*\(\d{4}\)/, '').trim();
+    const response = await fetch(apiEndpoint);
+    if (response.ok) {
+      const resData = await response.json();
+      if (resData && (resData.success || resData.streamUrl || resData.embedUrl || (resData.players && resData.players.length > 0))) {
+        data = resData;
       }
-      if (rawTitle && rawTitle.length > 2) {
+    }
+
+    // Fallback si l'endpoint principal de DeadCow retourne une liste vide pour les séries/animes
+    if (!data || !data.success || (!data.streamUrl && !data.embedUrl && (!data.players || data.players.length === 0))) {
+      if (type === 'movie') {
+        const altEndpoint = `/api/dc-proxy/resolve?id=${encodeURIComponent(cleanSlug || primaryId)}&type=movie&season=1&episode=1&version=${encodeURIComponent(currentVersion)}`;
         try {
-          if (loaderText) loaderText.textContent = `Recherche HD TMDB pour "${rawTitle}"...`;
-          const sRes = await dcFetch('/search', { q: rawTitle, type: type === 'movie' ? 'movie' : 'all' });
-          const tmdbMatch = sRes?.results?.find(r => r.id && /^\d+$/.test(String(r.id)));
-          if (tmdbMatch && tmdbMatch.id) {
-            console.log(`[Smart Resolve] Basculement vers TMDB ID ${tmdbMatch.id} pour "${rawTitle}"`);
-            const tmdbData = await Promise.any([
-              attemptFetch(tmdbMatch.id, currentVersion, numericSeason, type, 6000),
-              attemptFetch(tmdbMatch.id, currentVersion === 'vf' ? 'vostfr' : 'vf', numericSeason, type, 6000),
-              attemptFetch(tmdbMatch.id, currentVersion, undefined, type, 6000)
-            ]);
-            if (tmdbData && tmdbData.success && (tmdbData.streamUrl || tmdbData.embedUrl)) {
-              data = tmdbData;
-            }
+          const altRes = await fetch(altEndpoint);
+          if (altRes.ok) {
+            const altData = await altRes.json();
+            if (altData && (altData.streamUrl || altData.embedUrl || altData.players)) data = altData;
           }
-        } catch (eTmdb) {}
+        } catch(e) {}
       }
     }
 
-    // Fallback Universel VidSrc HD Garanti si tout le reste échoue
-    if (!data || !data.success || (!data.streamUrl && !data.embedUrl)) {
+    // Fallback Universel Garanti
+    if (!data || (!data.streamUrl && !data.embedUrl && (!data.players || data.players.length === 0))) {
       if (primaryId || cleanSlug) {
         const targetId = cleanSlug || primaryId;
         const fallEmbed = (type === 'tv' || type === 'anime')
-          ? `https://vidsrc.me/embed/tv?tmdb=${targetId}&season=${numericSeason}&episode=${episode || 1}`
-          : `https://vidsrc.me/embed/movie?tmdb=${targetId}`;
+          ? `https://vidsrc.net/embed/tv/${targetId}/${numericSeason}-${episode || 1}`
+          : `https://vidsrc.net/embed/movie/${targetId}`;
 
         data = {
           success: true,
@@ -1656,8 +1634,8 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
       }
     }
 
-    // Détecter si c'est un film non encore sorti au cinéma (ex: Spider-Man Brand New Day 2026)
-    const isUnreleasedMovie = type === 'movie' && (!data.streamUrl || data.streamUrl === null) && (!data.embeds || (!data.embeds.vf && !data.embeds.vostfr)) && (parseInt(currentAnime?.year, 10) >= 2026 || (currentAnime?.title || '').includes('2026') || (data.embedUrl || '').includes('vidsrc.to/embed/movie/'));
+    // Détecter si c'est un film non encore sorti au cinéma
+    const isUnreleasedMovie = type === 'movie' && (!data.streamUrl || data.streamUrl === null) && (!data.players || data.players.length === 0) && (!data.embeds || (!data.embeds.vf && !data.embeds.vostfr)) && (parseInt(currentAnime?.year, 10) >= 2026 || (currentAnime?.title || '').includes('2026') || (data.embedUrl || '').includes('vidsrc.to/embed/movie/'));
 
     if (isUnreleasedMovie) {
       videoLoader.classList.remove('active');
@@ -1703,7 +1681,9 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
 
     playerEpTitle.textContent = data.title || `S${displaySeason} • Ép. ${episode} (${currentVersion.toUpperCase()})`;
     buildSourceSelector(data);
-    playStream(data.streamUrl || data.embedUrl);
+
+    const firstUrl = (data.players && data.players.length > 0) ? data.players[0].url : (data.streamUrl || data.embedUrl);
+    playStream(firstUrl);
 
   } catch (err) {
     videoLoader.classList.remove('active');
@@ -1730,7 +1710,7 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
   }
 }
 
-// ─── Menu des Sources Lecteurs (Multi-Sources & Miroirs HD JapoPlay) ───
+// ─── Menu des Sources Lecteurs (Multi-Sources DeadCow Streaming) ───
 function buildSourceSelector(data) {
   if (!streamSourceSelect) return;
   streamSourceSelect.innerHTML = '';
@@ -1755,41 +1735,41 @@ function buildSourceSelector(data) {
     return clean;
   };
 
-  // 1. Si embedUrl contient un fichier MP4/HLS direct
-  if (data.embedUrl && (data.embedUrl.endsWith('.mp4') || data.embedUrl.endsWith('.m3u8') || data.embedUrl.includes('citron-edge') || data.embedUrl.includes('.mp4?'))) {
-    const cleanEmbed = cleanUrl(data.embedUrl);
-    if (cleanEmbed && !sources.some(s => s.url === cleanEmbed)) {
-      sources.push({ name: '🟢 Lecteur Direct 1080p JapoPlay (Recommandé)', url: cleanEmbed });
-    }
+  // 1. Lecteurs Officiels DeadCow API (data.players)
+  if (data.players && Array.isArray(data.players) && data.players.length > 0) {
+    data.players.forEach(p => {
+      if (p.url && !sources.some(s => s.url === p.url)) {
+        sources.push({ name: `🟢 Lecteur DeadCow HD — ${p.name || 'Stream 1080p'}`, url: p.url });
+      }
+    });
   }
 
-  // 2. Flux direct JapoPlay (HLS / MP4)
+  // 2. Flux Direct DeadCow (HLS / MP4)
   if (data.streamUrl) {
     const cleanStream = cleanUrl(data.streamUrl);
     if (cleanStream && !sources.some(s => s.url === cleanStream)) {
-      sources.push({ name: '⚡ Lecteur Direct HD JapoPlay', url: cleanStream });
+      sources.push({ name: '⚡ Lecteur Direct DeadCow (HLS 1080p)', url: cleanStream });
     }
   }
 
-  // 3. Embed Principal
+  // 3. Embed Principal DeadCow
   if (data.embedUrl) {
     const cleanEmbed = cleanUrl(data.embedUrl);
     if (cleanEmbed && !sources.some(s => s.url === cleanEmbed)) {
-      sources.push({ name: '🎬 Lecteur Embed Principal', url: cleanEmbed });
+      sources.push({ name: '🎬 Lecteur Embed DeadCow Principal', url: cleanEmbed });
     }
   }
 
-  // 4. Miroirs d'embeds secondaires (Sibnet, Vidmoly, Vidoza, Franime, etc.)
+  // 4. Miroirs Embeds DeadCow (AnsEmbed, SendVid, Sibnet, Vidmoly, etc.)
   if (data.embeds) {
     Object.entries(data.embeds).forEach(([key, url]) => {
       const targetUrl = cleanUrl(url);
       if (targetUrl) {
-        let label = `🎬 Lecteur ${key.toUpperCase()}`;
-        if (targetUrl.includes('sibnet')) label = '⚡ Lecteur Sibnet (Ultra Rapide)';
-        else if (targetUrl.includes('vidmoly')) label = '🎬 Lecteur Vidmoly (HD)';
-        else if (targetUrl.includes('vidoza')) label = '▶ Lecteur Vidoza (HD)';
-        else if (targetUrl.includes('vidsrc')) label = '🎬 Lecteur Film & Séries HD (VidSrc)';
-        else if (targetUrl.includes('franime')) label = '🟢 Lecteur Direct Franime HD';
+        let label = `🎬 Lecteur Embed DeadCow (${key.toUpperCase()})`;
+        if (targetUrl.includes('ansembed')) label = `⚡ Lecteur AnsEmbed HD (${key.toUpperCase()})`;
+        else if (targetUrl.includes('sendvid')) label = `🎬 Lecteur SendVid HD (${key.toUpperCase()})`;
+        else if (targetUrl.includes('sibnet')) label = `⚡ Lecteur Sibnet (${key.toUpperCase()})`;
+        else if (targetUrl.includes('vidmoly')) label = `🎬 Lecteur Vidmoly (${key.toUpperCase()})`;
         if (!sources.some(s => s.url === targetUrl)) {
           sources.push({ name: label, url: targetUrl });
         }
