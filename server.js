@@ -737,15 +737,42 @@ app.get('/api/embed-proxy', async (req, res) => {
         </div>`);
       }
 
-      // Injecter la balise <base> et la balise CSP upgrade-insecure-requests
+      // Injecter la balise <base>, la balise CSP et le script de contournement CORS pour XHR/fetch
       try {
         const urlObj = new URL(embedUrl);
         const originUrl = `${urlObj.protocol}//${urlObj.host}/`;
         const cspMeta = `<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">`;
+        const corsScript = `
+        <script>
+          (function() {
+            var origOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(method, url) {
+              if (url && typeof url === 'string' && (url.startsWith('http') || url.startsWith('//')) && !url.includes('/api/proxy')) {
+                var fullUrl = url.startsWith('//') ? 'https:' + url : url;
+                url = '/api/proxy?url=' + encodeURIComponent(fullUrl);
+              }
+              return origOpen.apply(this, arguments);
+            };
+            var origFetch = window.fetch;
+            if (origFetch) {
+              window.fetch = function(input, init) {
+                var url = (typeof input === 'string') ? input : (input && input.url ? input.url : input);
+                if (url && typeof url === 'string' && (url.startsWith('http') || url.startsWith('//')) && !url.includes('/api/proxy')) {
+                  var fullUrl = url.startsWith('//') ? 'https:' + url : url;
+                  var proxyUrl = '/api/proxy?url=' + encodeURIComponent(fullUrl);
+                  if (typeof input === 'string') input = proxyUrl;
+                  else if (input && input.url) input = new Request(proxyUrl, input);
+                }
+                return origFetch.call(this, input, init);
+              };
+            }
+          })();
+        </script>
+        `;
         if (html.toLowerCase().includes('<head>')) {
-          html = html.replace(/<head>/i, `<head>${cspMeta}<base href="${originUrl}">`);
+          html = html.replace(/<head>/i, `<head>${cspMeta}${corsScript}<base href="${originUrl}">`);
         } else {
-          html = `<head>${cspMeta}<base href="${originUrl}"></head>${html}`;
+          html = `<head>${cspMeta}${corsScript}<base href="${originUrl}"></head>${html}`;
         }
       } catch (e) {}
 
