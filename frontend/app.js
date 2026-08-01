@@ -1581,27 +1581,32 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
     const titleClean = (currentAnime?.title || primaryId || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const slugFromTitle = titleClean.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-    const candidateConfigs = [
-      { id: cleanSlug, version: currentVersion, season },
-      { id: cleanSlug, version: currentVersion, season: season ? `saison${season}` : undefined },
-      { id: cleanSlug, version: currentVersion === 'vf' ? 'vostfr' : 'vf', season }
-    ];
+    const numericSeason = parseInt(season, 10) || 1;
+    const candidateConfigs = [];
+
+    if (/^\d+$/.test(String(cleanSlug))) {
+      candidateConfigs.push({ id: cleanSlug, version: currentVersion, season: numericSeason, tType: type });
+    } else {
+      candidateConfigs.push({ id: cleanSlug, version: currentVersion, season: numericSeason, tType: type });
+      candidateConfigs.push({ id: cleanSlug, version: currentVersion, season: undefined, tType: type });
+    }
+
+    if (titleClean.includes('foot 2 rue') || cleanSlug.includes('foot-2-rue')) {
+      candidateConfigs.push({ id: '65141', version: currentVersion, season: numericSeason, tType: 'tv' });
+      candidateConfigs.push({ id: '294129', version: currentVersion, season: numericSeason, tType: 'tv' });
+    }
 
     if (slugFromTitle && slugFromTitle !== cleanSlug) {
-      candidateConfigs.push({ id: slugFromTitle, version: currentVersion, season });
-    }
-    if (cleanSlug.includes('foot-2-rue')) {
-      candidateConfigs.push({ id: 'foot-2-rue-extreme', version: currentVersion, season });
-      candidateConfigs.push({ id: 'foot-2-rue', version: currentVersion, season });
+      candidateConfigs.push({ id: slugFromTitle, version: currentVersion, season: numericSeason, tType: type });
     }
 
     for (const cfg of candidateConfigs) {
       if (!cfg.id) continue;
       try {
-        const res = await attemptFetch(cfg.id, cfg.version, cfg.season, type, 8000);
+        const res = await attemptFetch(cfg.id, cfg.version, cfg.season, cfg.tType || type, 4000);
         if (res && res.success && (res.streamUrl || res.embedUrl)) {
           data = res;
-          break; // Succès ! Arrêt immédiat de la recherche
+          break; // Succès ! Arrêt immédiat
         }
       } catch (eSeq) {}
     }
