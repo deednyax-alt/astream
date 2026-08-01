@@ -507,14 +507,24 @@ app.post('/api/maintenance/toggle', (req, res) => {
   res.json({ success: true, maintenance: isMaintenanceMode, message: maintenanceMessage });
 });
 
-// ─── Proxy Serveur Automatique vers l'API Officielle DeadCow v1 ──
+// ─── Proxy Serveur Automatique vers l'API Officielle DeadCow ──
+const DEADCOW_KEY = process.env.DEADCOW_API_KEY || 'dc_live_8226b97d0d55d7e6b87a15e6';
+
 app.use('/api/dc-proxy', async (req, res) => {
   try {
     const targetEndpoint = req.path;
     const queryParams = new URLSearchParams(req.query);
-    if (!queryParams.has('key')) queryParams.set('key', 'dc_live_c5d15446a0c5cf51b22b5be9');
+    if (!queryParams.has('key') && !queryParams.has('api_key')) {
+      queryParams.set('key', DEADCOW_KEY);
+    }
 
-    const targetUrl = `https://deadcow-streaming.lol/api/v1${targetEndpoint}?${queryParams.toString()}`;
+    let targetUrl;
+    if (targetEndpoint.startsWith('/catalog') || targetEndpoint.startsWith('/search')) {
+      targetUrl = `https://deadcow-streaming.lol/api/v1${targetEndpoint}?${queryParams.toString()}`;
+    } else {
+      targetUrl = `https://deadcow-streaming.lol/api${targetEndpoint}?${queryParams.toString()}`;
+    }
+
     const response = await axios({
       method: req.method,
       url: targetUrl,
