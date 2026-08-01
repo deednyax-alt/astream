@@ -914,6 +914,15 @@ async function loadCategory(cat, append = false) {
       }
     }
 
+    // Si l'API distante ne renvoie aucun élément (ex: Cloudflare 530 / serveur en maintenance), basculer sur le catalogue de secours
+    if (items.length === 0 && cat !== 'schedule' && cat !== 'history' && cat !== 'live') {
+      console.warn(`[Catalog Fallback] Activation du catalogue de secours local pour [${cat}]`);
+      items = await getFallbackCatalogItems(cat);
+      if (!append) grid.innerHTML = '';
+      renderCards(grid, items);
+      if (items.length > 0) setHero(items[0]);
+    }
+
     dataStatusBadge.textContent = '⚡ astream Live';
     dataStatusBadge.style.color = '#10b981';
 
@@ -922,10 +931,97 @@ async function loadCategory(cat, append = false) {
 
   } catch (err) {
     console.error(`Erreur chargement [${cat}]:`, err);
-    grid.innerHTML = `<p style="grid-column:1/-1;color:#ef4444;padding:20px">⚠ Impossible de charger : ${err.message}</p>`;
-    dataStatusBadge.textContent = '⚠ Erreur API';
-    dataStatusBadge.style.color = '#ef4444';
+    const fallbackItems = await getFallbackCatalogItems(cat);
+    if (!append) grid.innerHTML = '';
+    renderCards(grid, fallbackItems);
+    dataStatusBadge.textContent = '🟢 Mode Secours Actif';
+    dataStatusBadge.style.color = '#f59e0b';
   }
+}
+
+// ─── Catalogue de Secours Local (Anti-Écran Vide / Anti-Cloudflare 530) ───
+async function getFallbackCatalogItems(cat) {
+  try {
+    const res = await fetch('/mockData.json');
+    if (res.ok) {
+      const mockList = await res.json();
+      if (Array.isArray(mockList) && mockList.length > 0) {
+        return mockList.map(m => ({
+          id: m.id,
+          title: m.title,
+          poster: m.image,
+          banner: m.banner,
+          synopsis: m.synopsis,
+          voteAverage: m.rating,
+          type: cat === 'movie' ? 'movie' : (cat === 'tv' ? 'tv' : 'anime'),
+          episodes: m.episodes
+        }));
+      }
+    }
+  } catch(e) {}
+
+  return [
+    {
+      id: 'demon-slayer',
+      title: 'Demon Slayer: Kimetsu no Yaiba',
+      poster: 'https://cdn.myanimelist.net/images/anime/1286/99889.jpg',
+      banner: 'https://images5.alphacoders.com/102/1027170.jpg',
+      synopsis: 'Tanjirou devient un tueur de démons pour venger sa famille et guérir sa sœur Nezuko.',
+      voteAverage: 8.7,
+      type: 'anime'
+    },
+    {
+      id: 'attack-on-titan',
+      title: 'L\'Attaque des Titans',
+      poster: 'https://cdn.myanimelist.net/images/anime/10/47347.jpg',
+      banner: 'https://images2.alphacoders.com/508/508608.jpg',
+      synopsis: 'Eren Jäger combat les Titans géants mangeurs d\'hommes pour sauver l\'humanité.',
+      voteAverage: 9.1,
+      type: 'anime'
+    },
+    {
+      id: 'solo-leveling',
+      title: 'Solo Leveling',
+      poster: 'https://image.tmdb.org/t/p/w500/v7xmSCuGqVwSHfXkjAgZEEtl1Gr.jpg',
+      banner: 'https://image.tmdb.org/t/p/original/m91f3a2iN0N7G77lW.jpg',
+      synopsis: 'Sung Jinwoo, le plus faible des chasseurs, gagne le pouvoir de monter de niveau sans limite.',
+      voteAverage: 8.8,
+      type: 'anime'
+    },
+    {
+      id: 'one-piece',
+      title: 'One Piece',
+      poster: 'https://cdn.myanimelist.net/images/anime/6/73245.jpg',
+      synopsis: 'Luffy et son équipage naviguent sur Grand Line à la recherche du trésor légendaire.',
+      voteAverage: 8.9,
+      type: 'anime'
+    },
+    {
+      id: 'jujutsu-kaisen',
+      title: 'Jujutsu Kaisen',
+      poster: 'https://cdn.myanimelist.net/images/anime/1171/109222.jpg',
+      synopsis: 'Yuji Itadori avale un doigt maudit et intègre l\'école d\'exorcisme de Tokyo.',
+      voteAverage: 8.7,
+      type: 'anime'
+    },
+    {
+      id: 'the-batman',
+      title: 'The Batman',
+      poster: 'https://image.tmdb.org/t/p/w500/1rHd9eNvhQO3ueVuK8WC06VQXG9.jpg',
+      synopsis: 'Batman enquête sur la corruption à Gotham City et traque le Riddler.',
+      voteAverage: 8.5,
+      type: 'movie'
+    },
+    {
+      id: 'spider-man-brand-new-day',
+      title: 'Spider-Man: Brand New Day (2026)',
+      poster: 'https://image.tmdb.org/t/p/w500/vPBy6cDPYMcj35lpl3W5kPEc2OB.jpg',
+      synopsis: 'Le nouveau chapitre très attendu des aventures de Spider-Man.',
+      voteAverage: 9.0,
+      year: '2026',
+      type: 'movie'
+    }
+  ];
 }
 
 // ─── Système de Pagination Dynamique par Onglets ──────────────────
