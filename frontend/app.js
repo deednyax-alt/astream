@@ -1909,6 +1909,9 @@ async function playStream(url) {
     video.style.display = 'none';
     if (iframe) {
       iframe.style.display = 'block';
+      try {
+        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+      } catch(e) {}
 
       let embedSrc = targetUrl;
       // Ne passer par embed-proxy QUE pour les URLs spécifiques nécessitant un proxying lourd
