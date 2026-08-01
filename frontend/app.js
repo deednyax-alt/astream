@@ -426,47 +426,31 @@ async function loadUpcomingMovies(grid) {
   });
 }
 
-// ─── Appel API DeadCow v1 (Direct & Proxy Serveur Automatique) ───
-async function dcFetch(endpoint, params = {}, options = {}) {
-  const { retries = 2, retryDelay = 1000, timeout = 35000 } = options;
-
+// ─── Appel API DeadCow v1 (Proxy Serveur Sécurisé) ───
+async function dcFetch(endpoint, params = {}) {
   let queryStr = `key=${API_KEY}`;
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== null) queryStr += `&${encodeURIComponent(k)}=${encodeURIComponent(v)}`;
   });
 
-  const proxyUrl  = `/api/dc-proxy${endpoint}?${queryStr}`;
-  const directUrl = `${DC_API}${endpoint}?${queryStr}`;
-  const targets   = [proxyUrl, directUrl, proxyUrl];
+  const proxyUrl = `/api/dc-proxy${endpoint}?${queryStr}`;
 
-  let lastError;
-  for (let attempt = 0; attempt < targets.length && attempt <= retries; attempt++) {
-    try {
-      const target = targets[attempt];
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 7000);
 
-      const res = await fetch(target, { signal: controller.signal });
-      clearTimeout(timer);
+    const res = await fetch(proxyUrl, { signal: controller.signal });
+    clearTimeout(timer);
 
-      if (!res.ok) {
-        if (res.status === 429) {
-          await new Promise(r => setTimeout(r, 1500));
-        }
-        throw new Error(`Erreur API ${res.status}`);
-      }
-      return await res.json();
-    } catch (err) {
-      lastError = err;
-      if (attempt < retries) {
-        await new Promise(r => setTimeout(r, retryDelay));
-      }
+    if (res.ok) {
+      const data = await res.json();
+      if (data) return data;
     }
+  } catch (err) {
+    console.warn(`[dcFetch Warning] ${endpoint}: ${err.message}`);
   }
 
-  // Télémétrie d'erreur automatique (POST /send-key-bug)
-  sendErrorTelemetry(endpoint, lastError?.message || 'Erreur API DeadCow');
-  throw lastError;
+  return { success: false, fallback: true, results: [], movies: [], series: [] };
 }
 
 // Envoi de la télémétrie d'erreur en arrière-plan (via le proxy local pour éviter CORS)
