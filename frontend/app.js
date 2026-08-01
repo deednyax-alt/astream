@@ -1730,8 +1730,9 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
   }
 }
 
-// ─── Menu des Sources Lecteurs (Lecteur Original Astream) ───────
+// ─── Menu des Sources Lecteurs (Lecteur Original JapoPlay) ───────
 function buildSourceSelector(data) {
+  if (!streamSourceSelect) return;
   streamSourceSelect.innerHTML = '';
   const sources = [];
 
@@ -1739,33 +1740,33 @@ function buildSourceSelector(data) {
   const numericTmdb = (tmdbId && /^\d+$/.test(String(tmdbId).trim())) ? String(tmdbId).trim() : null;
 
   const cleanUrl = (u) => {
-    if (!u || typeof u !== 'string') return u;
-    if (u.includes('vidsrc') && (u.includes('/http') || u.includes('/https'))) {
+    if (!u || typeof u !== 'string') return null;
+    let clean = u.trim();
+    if (clean.includes('vidsrc') && (clean.includes('/http') || clean.includes('/https'))) {
       if (numericTmdb) {
         return currentAnime?.type === 'movie' ? `https://vidsrc.me/embed/movie?tmdb=${numericTmdb}` : `https://vidsrc.me/embed/tv?tmdb=${numericTmdb}&season=1&episode=1`;
       }
-      return null;
     }
-    return u;
+    return clean;
   };
 
-  // 1. Si embedUrl contient un fichier MP4/HLS direct, le placer en TOUT PREMIER au lieu d'une iframe
+  // 1. Si embedUrl contient un fichier MP4/HLS direct
   if (data.embedUrl && (data.embedUrl.endsWith('.mp4') || data.embedUrl.endsWith('.m3u8') || data.embedUrl.includes('citron-edge') || data.embedUrl.includes('.mp4?'))) {
     const cleanEmbed = cleanUrl(data.embedUrl);
     if (cleanEmbed && !sources.some(s => s.url === cleanEmbed)) {
-      sources.push({ name: '🟢 Lecteur Direct 1080p astream (Recommandé)', url: cleanEmbed });
+      sources.push({ name: '🟢 Lecteur Direct 1080p JapoPlay (Recommandé)', url: cleanEmbed });
     }
   }
 
-  // 2. Placer le flux direct astream s'il est disponible et non doublon
+  // 2. Flux direct JapoPlay (HLS / MP4)
   if (data.streamUrl) {
     const cleanStream = cleanUrl(data.streamUrl);
     if (cleanStream && !sources.some(s => s.url === cleanStream)) {
-      sources.push({ name: '🟢 Lecteur Direct astream (HD)', url: cleanStream });
+      sources.push({ name: '⚡ Lecteur Direct HD JapoPlay', url: cleanStream });
     }
   }
 
-  // 3. Placer l'embed principal s'il est disponible et non doublon
+  // 3. Embed Principal
   if (data.embedUrl) {
     const cleanEmbed = cleanUrl(data.embedUrl);
     if (cleanEmbed && !sources.some(s => s.url === cleanEmbed)) {
