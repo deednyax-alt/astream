@@ -1900,8 +1900,16 @@ async function playStream(url) {
     video.style.display = 'none';
     if (iframe) {
       iframe.style.display = 'block';
-      const proxiedEmbed = targetUrl.startsWith('/api/') ? targetUrl : `/api/embed-proxy?url=${encodeURIComponent(targetUrl)}`;
-      iframe.src = proxiedEmbed;
+
+      let embedSrc = targetUrl;
+      // Ne passer par embed-proxy QUE pour les URLs spécifiques nécessitant un proxying lourd
+      const requiresProxy = targetUrl.startsWith('http') && !targetUrl.includes('vidsrc') && !targetUrl.includes('smashystream') && !targetUrl.includes('superembed') && !targetUrl.includes('2embed') && !targetUrl.includes('vidmoly') && !targetUrl.includes('sibnet');
+
+      if (requiresProxy) {
+        embedSrc = `/api/embed-proxy?url=${encodeURIComponent(targetUrl)}`;
+      }
+
+      iframe.src = embedSrc;
     }
     videoLoader.classList.remove('active');
     return;
