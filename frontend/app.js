@@ -1609,12 +1609,21 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
       apiEndpoint = `/api/dc-proxy/resolve?id=${encodeURIComponent(cleanId)}&type=${encodeURIComponent(resolveType)}&season=${encodeURIComponent(numericSeason)}&episode=${encodeURIComponent(episode)}&version=${encodeURIComponent(currentVersion)}`;
     }
 
-    const response = await fetch(apiEndpoint);
-    if (response.ok) {
-      const resData = await response.json();
-      if (resData && (resData.success || resData.streamUrl || resData.embedUrl || (resData.players && resData.players.length > 0))) {
-        data = resData;
+    const controller = new AbortController();
+    const fetchTimeout = setTimeout(() => controller.abort(), 12000);
+
+    try {
+      const response = await fetch(apiEndpoint, { signal: controller.signal });
+      clearTimeout(fetchTimeout);
+      if (response.ok) {
+        const resData = await response.json();
+        if (resData && (resData.success || resData.streamUrl || resData.embedUrl || (resData.players && resData.players.length > 0))) {
+          data = resData;
+        }
       }
+    } catch(eFetch) {
+      clearTimeout(fetchTimeout);
+      console.warn('[Resolve] Primary fetch timeout/failed, switching to instant fallback...');
     }
 
     // Fallback si l'endpoint principal de DeadCow retourne une liste vide pour les séries/animes
@@ -1905,9 +1914,13 @@ async function playStream(url) {
     video.style.display = 'none';
     if (iframe) {
       iframe.style.display = 'block';
-      try {
-        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
-      } catch(e) {}
+      if (targetUrl.includes('vidsrc') || targetUrl.includes('vidzy') || targetUrl.includes('ansembed') || targetUrl.includes('sibnet') || targetUrl.includes('sendvid')) {
+        iframe.removeAttribute('sandbox');
+      } else {
+        try {
+          iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+        } catch(e) {}
+      }
 
       let embedSrc = targetUrl;
       // Ne passer par embed-proxy QUE pour les URLs spécifiques nécessitant un proxying lourd
