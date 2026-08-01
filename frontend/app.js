@@ -1,10 +1,10 @@
 // ============================================================
-//  astream — Animes · Séries · Films · Mangas · TV & Sports
+//  JapoPlay — Animes · Séries · Films · Mangas · TV & Sports
 // ============================================================
 const API_KEY = 'dc_live_c5d15446a0c5cf51b22b5be9';
 const DC_API  = 'https://deadcow-streaming.lol/api/v1';
 
-window.NO_IMAGE_SVG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="280" viewBox="0 0 200 280"><rect width="200" height="280" fill="%23121420"/><text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" fill="%238b5cf6" font-family="sans-serif" font-size="18" font-weight="bold">astream</text><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="sans-serif" font-size="12">Image indisponible</text></svg>';
+window.NO_IMAGE_SVG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="280" viewBox="0 0 200 280"><rect width="200" height="280" fill="%23121420"/><text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" fill="%238b5cf6" font-family="sans-serif" font-size="18" font-weight="bold">JapoPlay</text><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="sans-serif" font-size="12">Image indisponible</text></svg>';
 const NO_IMAGE_SVG = window.NO_IMAGE_SVG;
 
 function normalizePosterUrl(poster, item = {}) {
@@ -2903,7 +2903,7 @@ function initSplashLoader() {
   if (!loader) return;
 
   const messages = [
-    "Initialisation du moteur astream HD…",
+    "Initialisation du moteur JapoPlay HD…",
     "Connexion aux résolveurs sécurisés…",
     "Chargement des tendances & nouveautés…",
     "Plateforme prête !"

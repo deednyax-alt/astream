@@ -417,7 +417,7 @@ function loadUsers() {
     usersStore.push({
       id: 'admin_owner',
       username: 'admin',
-      email: 'admin@astream.app',
+      email: 'admin@japoplay.app',
       password: ADMIN_PASSWORD,
       role: 'admin',
       createdAt: new Date().toISOString()
