@@ -1583,14 +1583,26 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
 
     const numericSeason = parseInt(season, 10) || 1;
 
+    let cleanId = primaryId || cleanSlug || slugFromTitle || '';
+    if (typeof cleanId === 'string' && cleanId.startsWith('http')) {
+      try {
+        const u = new URL(cleanId);
+        const parts = u.pathname.split('/').filter(Boolean);
+        let rawPart = parts[parts.length - 1] || slugFromTitle;
+        cleanId = decodeURIComponent(rawPart).toLowerCase().replace(/\s*\(\d{4}\)/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      } catch(e) {
+        cleanId = slugFromTitle;
+      }
+    }
+
     // Tenter de récupérer les lecteurs via l'API Officielle DeadCow (movie/stream & resolve)
     let apiEndpoint = '';
     if (type === 'movie') {
-      const titleQuery = currentAnime?.title || 'Film';
-      apiEndpoint = `/api/dc-proxy/movie/stream?title=${encodeURIComponent(titleQuery)}&tmdbId=${encodeURIComponent(primaryId || cleanSlug || '')}`;
+      const titleQuery = (currentAnime?.title || cleanId || 'Film').replace(/\s*\(\d{4}\)/g, '').trim();
+      apiEndpoint = `/api/dc-proxy/movie/stream?title=${encodeURIComponent(titleQuery)}&tmdbId=${encodeURIComponent(cleanId || '')}`;
     } else {
       let resolveType = type || (isAnime ? 'anime' : 'tv');
-      apiEndpoint = `/api/dc-proxy/resolve?id=${encodeURIComponent(cleanSlug || primaryId)}&type=${encodeURIComponent(resolveType)}&season=${encodeURIComponent(numericSeason)}&episode=${encodeURIComponent(episode)}&version=${encodeURIComponent(currentVersion)}`;
+      apiEndpoint = `/api/dc-proxy/resolve?id=${encodeURIComponent(cleanId)}&type=${encodeURIComponent(resolveType)}&season=${encodeURIComponent(numericSeason)}&episode=${encodeURIComponent(episode)}&version=${encodeURIComponent(currentVersion)}`;
     }
 
     const response = await fetch(apiEndpoint);
@@ -1919,15 +1931,11 @@ async function playStream(url) {
 
   if (window.Hls && Hls.isSupported() && isHlsManifest) {
     let streamUrl = url;
-    if (!url.startsWith('/api/proxy') && !url.startsWith(window.location.origin + '/api/proxy')) {
-      let normTarget = url;
-      if (normTarget.includes('/api/hls-proxy') || normTarget.includes('/api/media-proxy')) {
-        normTarget = normTarget.replace(/^https?:\/\/[^\/]+/, 'https://deadcow-streaming.lol');
-        if (normTarget.startsWith('/')) normTarget = `https://deadcow-streaming.lol${normTarget}`;
-      } else if (normTarget.startsWith('/')) {
-        normTarget = `https://deadcow-streaming.lol${normTarget}`;
-      }
-      streamUrl = `/api/proxy?url=${encodeURIComponent(normTarget)}&referer=${encodeURIComponent('https://deadcow-streaming.lol/')}`;
+    if (url.includes('deadcow-streaming.lol') || url.includes('citron-edge') || url.includes('media-proxy') || url.includes('hls-proxy')) {
+      streamUrl = url.replace(/^http:\/\//i, 'https://');
+      if (streamUrl.startsWith('/')) streamUrl = `https://deadcow-streaming.lol${streamUrl}`;
+    } else if (!url.startsWith('/api/proxy') && !url.startsWith(window.location.origin + '/api/proxy')) {
+      streamUrl = `/api/proxy?url=${encodeURIComponent(url)}&referer=${encodeURIComponent('https://deadcow-streaming.lol/')}`;
     }
 
     hlsInstance = new Hls({
@@ -1935,15 +1943,12 @@ async function playStream(url) {
       lowLatencyMode: true,
       backBufferLength: 90,
       xhrSetup: function(xhr, xhrUrl) {
-        let realTarget = xhrUrl;
-        if (realTarget.includes('/api/proxy?')) {
+        if (xhrUrl.includes('deadcow-streaming.lol') || xhrUrl.includes('citron-edge') || xhrUrl.includes('media-proxy') || xhrUrl.includes('hls-proxy') || xhrUrl.includes('/api/proxy?')) {
           return;
         }
 
-        if (realTarget.includes('/api/hls-proxy') || realTarget.includes('/api/media-proxy')) {
-          realTarget = realTarget.replace(/^https?:\/\/[^\/]+/, 'https://deadcow-streaming.lol');
-          if (realTarget.startsWith('/')) realTarget = `https://deadcow-streaming.lol${realTarget}`;
-        } else if (realTarget.startsWith('/')) {
+        let realTarget = xhrUrl;
+        if (realTarget.startsWith('/')) {
           realTarget = `https://deadcow-streaming.lol${realTarget}`;
         } else if (!realTarget.startsWith('http://') && !realTarget.startsWith('https://')) {
           realTarget = `https://deadcow-streaming.lol/${realTarget}`;
