@@ -519,7 +519,7 @@ app.use('/api/dc-proxy', async (req, res) => {
     }
 
     let targetUrl;
-    if (targetEndpoint.startsWith('/catalog') || targetEndpoint.startsWith('/search') || targetEndpoint.startsWith('/resolve') || targetEndpoint.startsWith('/manga')) {
+    if (targetEndpoint.startsWith('/catalog') || targetEndpoint.startsWith('/search') || targetEndpoint.startsWith('/details') || targetEndpoint.startsWith('/resolve') || targetEndpoint.startsWith('/manga') || targetEndpoint.startsWith('/movie') || targetEndpoint.startsWith('/serie') || targetEndpoint.startsWith('/iptv') || targetEndpoint.startsWith('/profiles')) {
       targetUrl = `https://deadcow-streaming.lol/api/v1${targetEndpoint}?${queryParams.toString()}`;
     } else {
       targetUrl = `https://deadcow-streaming.lol/api${targetEndpoint}?${queryParams.toString()}`;

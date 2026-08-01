@@ -765,7 +765,11 @@ async function loadCategory(cat, append = false) {
       let usingFallback = false;
       try {
         const data = await dcFetch('/iptv/channels');
-        items = data.channels || [];
+        items = Array.isArray(data) ? data : (data.channels || data.results || []);
+        if (items.length === 0) {
+          items = FALLBACK_CHANNELS;
+          usingFallback = true;
+        }
       } catch (iptvErr) {
         items = FALLBACK_CHANNELS;
         usingFallback = true;
