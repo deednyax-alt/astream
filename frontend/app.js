@@ -1568,7 +1568,7 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
     }
 
     const stream = res?.streamUrl || res?.embedUrl || '';
-    if (!res || !res.success || !stream || stream.includes('vidsrc.to/embed/movie/https:') || (tType === 'tv' && stream.includes('vidsrc.to/embed/tv/') && !res.streamUrl)) {
+    if (!res || !res.success || !stream || stream.includes('vidsrc.to/embed/movie/https:')) {
       throw new Error(res?.error || 'Flux indisponible pour ces paramètres.');
     }
     return res;
@@ -1625,9 +1625,9 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
           if (tmdbMatch && tmdbMatch.id) {
             console.log(`[Smart Resolve] Basculement vers TMDB ID ${tmdbMatch.id} pour "${rawTitle}"`);
             const tmdbData = await Promise.any([
-              attemptFetch(tmdbMatch.id, currentVersion, season, type, 20000),
-              attemptFetch(tmdbMatch.id, currentVersion === 'vf' ? 'vostfr' : 'vf', season, type, 20000),
-              attemptFetch(tmdbMatch.id, currentVersion, undefined, type, 20000)
+              attemptFetch(tmdbMatch.id, currentVersion, numericSeason, type, 6000),
+              attemptFetch(tmdbMatch.id, currentVersion === 'vf' ? 'vostfr' : 'vf', numericSeason, type, 6000),
+              attemptFetch(tmdbMatch.id, currentVersion, undefined, type, 6000)
             ]);
             if (tmdbData && tmdbData.success && (tmdbData.streamUrl || tmdbData.embedUrl)) {
               data = tmdbData;
@@ -1637,8 +1637,23 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
       }
     }
 
-    if (!data || !data.success) {
-      throw new Error('Résolution temporairement indisponible pour cet épisode.');
+    // Fallback Universel VidSrc HD Garanti si tout le reste échoue
+    if (!data || !data.success || (!data.streamUrl && !data.embedUrl)) {
+      if (primaryId || cleanSlug) {
+        const targetId = cleanSlug || primaryId;
+        const fallEmbed = (type === 'tv' || type === 'anime')
+          ? `https://vidsrc.me/embed/tv?tmdb=${targetId}&season=${numericSeason}&episode=${episode || 1}`
+          : `https://vidsrc.me/embed/movie?tmdb=${targetId}`;
+
+        data = {
+          success: true,
+          title: `Épisode ${episode || 1}`,
+          embedUrl: fallEmbed,
+          embeds: { vf: fallEmbed, vostfr: fallEmbed }
+        };
+      } else {
+        throw new Error('Résolution temporairement indisponible pour cet épisode.');
+      }
     }
 
     // Détecter si c'est un film non encore sorti au cinéma (ex: Spider-Man Brand New Day 2026)
