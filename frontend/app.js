@@ -1730,106 +1730,22 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
   }
 }
 
-// ─── Menu des Sources Lecteurs (Lecteur Original JapoPlay) ───────
+// ─── Menu des Sources Lecteurs (Lecteur Original JapoPlay Unique) ───
 function buildSourceSelector(data) {
   if (!streamSourceSelect) return;
   streamSourceSelect.innerHTML = '';
-  const sources = [];
 
-  const tmdbId = currentAnime?.id || currentAnime?.tmdbId || data.id || data.tmdbId;
-  const numericTmdb = (tmdbId && /^\d+$/.test(String(tmdbId).trim())) ? String(tmdbId).trim() : null;
+  const mainUrl = data.streamUrl || data.embedUrl || (currentAnime?.id ? `https://vidsrc.me/embed/tv?tmdb=${currentAnime.id}&season=1&episode=1` : '');
 
-  const cleanUrl = (u) => {
-    if (!u || typeof u !== 'string') return null;
-    let clean = u.trim();
-    if (clean.includes('vidsrc') && (clean.includes('/http') || clean.includes('/https'))) {
-      if (numericTmdb) {
-        return currentAnime?.type === 'movie' ? `https://vidsrc.me/embed/movie?tmdb=${numericTmdb}` : `https://vidsrc.me/embed/tv?tmdb=${numericTmdb}&season=1&episode=1`;
-      }
-    }
-    return clean;
-  };
+  const opt = document.createElement('option');
+  opt.value = '0';
+  opt.textContent = '🟢 Lecteur Principal JapoPlay (HTML5 1080p)';
+  streamSourceSelect.appendChild(opt);
 
-  // 1. Si embedUrl contient un fichier MP4/HLS direct
-  if (data.embedUrl && (data.embedUrl.endsWith('.mp4') || data.embedUrl.endsWith('.m3u8') || data.embedUrl.includes('citron-edge') || data.embedUrl.includes('.mp4?'))) {
-    const cleanEmbed = cleanUrl(data.embedUrl);
-    if (cleanEmbed && !sources.some(s => s.url === cleanEmbed)) {
-      sources.push({ name: '🟢 Lecteur Direct 1080p JapoPlay (Recommandé)', url: cleanEmbed });
-    }
-  }
-
-  // 2. Flux direct JapoPlay (HLS / MP4)
-  if (data.streamUrl) {
-    const cleanStream = cleanUrl(data.streamUrl);
-    if (cleanStream && !sources.some(s => s.url === cleanStream)) {
-      sources.push({ name: '⚡ Lecteur Direct HD JapoPlay', url: cleanStream });
-    }
-  }
-
-  // 3. Embed Principal
-  if (data.embedUrl) {
-    const cleanEmbed = cleanUrl(data.embedUrl);
-    if (cleanEmbed && !sources.some(s => s.url === cleanEmbed)) {
-      sources.push({ name: '🎬 Lecteur Embed Principal', url: cleanEmbed });
-    }
-  }
-
-  // 3. Ajouter les miroirs d'embeds secondaires (Sibnet, Vidmoly, Franime, VidSrc, etc.)
-  if (data.embeds) {
-    Object.entries(data.embeds).forEach(([key, url]) => {
-      const targetUrl = cleanUrl(url);
-      if (targetUrl) {
-        let label = `🎬 Lecteur ${key.toUpperCase()}`;
-        if (targetUrl.includes('sibnet')) label = '⚡ Lecteur Sibnet (Ultra Rapide)';
-        else if (targetUrl.includes('vidmoly')) label = '🎬 Lecteur Vidmoly (HD)';
-        else if (targetUrl.includes('vidoza')) label = '▶ Lecteur Vidoza (HD)';
-        else if (targetUrl.includes('vidsrc')) label = '🎬 Lecteur Film & Séries HD (VidSrc)';
-        else if (targetUrl.includes('franime')) label = '🟢 Lecteur Direct Franime HD';
-        if (!sources.some(s => s.url === targetUrl)) {
-          sources.push({ name: label, url: targetUrl });
-        }
-      }
-    });
-  }
-
-  const curEp = data?.episode || currentAnime?.episode || 1;
-  const curSeason = data?.season || currentAnime?.season || 1;
-
-  // 5. Sources alternatives universelles TMDB (VidSrc.me, VidSrc.cc, VidSrc.pro)
-  if (numericTmdb) {
-    const vidsrcUrl = currentAnime?.type === 'movie'
-      ? `https://vidsrc.me/embed/movie?tmdb=${numericTmdb}`
-      : `https://vidsrc.me/embed/tv?tmdb=${numericTmdb}&season=${curSeason}&episode=${curEp}`;
-    if (!sources.some(s => s.url === vidsrcUrl)) {
-      sources.push({ name: '🎬 Lecteur Secours HD (VidSrc)', url: vidsrcUrl });
-    }
-
-    const vidsrcCcUrl = currentAnime?.type === 'movie'
-      ? `https://vidsrc.cc/v2/embed/movie/${numericTmdb}`
-      : `https://vidsrc.cc/v2/embed/tv/${numericTmdb}/${curSeason}/${curEp}`;
-    if (!sources.some(s => s.url === vidsrcCcUrl)) {
-      sources.push({ name: '⚡ Lecteur Miroir 3 (SuperEmbed 1080p)', url: vidsrcCcUrl });
-    }
-
-    const vidsrcProUrl = currentAnime?.type === 'movie'
-      ? `https://vidsrc.pro/embed/movie/${numericTmdb}`
-      : `https://vidsrc.pro/embed/tv/${numericTmdb}/${curSeason}/${curEp}`;
-    if (!sources.some(s => s.url === vidsrcProUrl)) {
-      sources.push({ name: '▶ Lecteur Miroir 4 (VidSrc Pro HD)', url: vidsrcProUrl });
-    }
-  }
-
-  sources.forEach((src, idx) => {
-    const opt = document.createElement('option');
-    opt.value = idx;
-    opt.textContent = src.name;
-    streamSourceSelect.appendChild(opt);
-  });
-
-  streamSourceSelect._sources = sources;
+  streamSourceSelect._sources = [{ name: '🟢 Lecteur Principal JapoPlay (HTML5 1080p)', url: mainUrl }];
+  streamSourceSelect.value = 0;
   streamSourceSelect.onchange = () => {
-    const selected = sources[streamSourceSelect.value];
-    if (selected) playStream(selected.url);
+    if (mainUrl) playStream(mainUrl);
   };
 }
 
