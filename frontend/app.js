@@ -1599,7 +1599,11 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
     let apiEndpoint = '';
     if (type === 'movie') {
       const titleQuery = (currentAnime?.title || cleanId || 'Film').replace(/\s*\(\d{4}\)/g, '').trim();
-      apiEndpoint = `/api/dc-proxy/movie/stream?title=${encodeURIComponent(titleQuery)}&tmdbId=${encodeURIComponent(cleanId || '')}`;
+      let numericTmdb = (/^\d+$/.test(String(cleanId))) ? String(cleanId) : '';
+      if (!numericTmdb && currentAnime?.id && /^\d+$/.test(String(currentAnime.id))) {
+        numericTmdb = String(currentAnime.id);
+      }
+      apiEndpoint = `/api/dc-proxy/movie/stream?title=${encodeURIComponent(titleQuery)}` + (numericTmdb ? `&tmdbId=${encodeURIComponent(numericTmdb)}` : '');
     } else {
       let resolveType = type || (isAnime ? 'anime' : 'tv');
       apiEndpoint = `/api/dc-proxy/resolve?id=${encodeURIComponent(cleanId)}&type=${encodeURIComponent(resolveType)}&season=${encodeURIComponent(numericSeason)}&episode=${encodeURIComponent(episode)}&version=${encodeURIComponent(currentVersion)}`;
