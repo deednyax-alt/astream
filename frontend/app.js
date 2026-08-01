@@ -1577,44 +1577,34 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
   try {
     let data = null;
 
-    // Fast-path 1 : Résolution parallèle priorisant le slug relatif propre, l'URL Anime-Sama et le slug issu du titre
+    // Résolution séquentielle propre et ciblée (évite les 408 Request Timeout par saturation de requêtes)
     const titleClean = (currentAnime?.title || primaryId || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const slugFromTitle = titleClean.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-    const targetIds = [cleanSlug];
-    if (slugFromTitle && !targetIds.includes(slugFromTitle)) targetIds.push(slugFromTitle);
-    if (slugFromTitle && !targetIds.includes(`https://anime-sama.to/catalogue/${slugFromTitle}`)) {
-      targetIds.push(`https://anime-sama.to/catalogue/${slugFromTitle}`);
+    const candidateConfigs = [
+      { id: cleanSlug, version: currentVersion, season },
+      { id: cleanSlug, version: currentVersion, season: season ? `saison${season}` : undefined },
+      { id: cleanSlug, version: currentVersion === 'vf' ? 'vostfr' : 'vf', season }
+    ];
+
+    if (slugFromTitle && slugFromTitle !== cleanSlug) {
+      candidateConfigs.push({ id: slugFromTitle, version: currentVersion, season });
+    }
+    if (cleanSlug.includes('foot-2-rue')) {
+      candidateConfigs.push({ id: 'foot-2-rue-extreme', version: currentVersion, season });
+      candidateConfigs.push({ id: 'foot-2-rue', version: currentVersion, season });
     }
 
-    if (titleClean.includes('foot 2 rue') || titleClean.includes('foot2rue') || cleanSlug.includes('foot-2-rue')) {
-      targetIds.push('https://anime-sama.to/catalogue/foot-2-rue');
-      targetIds.push('foot-2-rue');
-      targetIds.push('foot-2-rue-extreme');
-      targetIds.push('https://anime-sama.to/catalogue/foot-2-rue-extreme');
-    }
-    if (cleanSlug !== primaryId && !targetIds.includes(primaryId)) targetIds.push(primaryId);
-
-    const typesToTry = [type];
-    if (type !== 'anime') typesToTry.push('anime');
-
-    const candidatePromises = [];
-    targetIds.forEach(tId => {
-      typesToTry.forEach(tType => {
-        if (season !== undefined && season !== null) {
-          candidatePromises.push(attemptFetch(tId, currentVersion, season, tType, 20000));
-          candidatePromises.push(attemptFetch(tId, currentVersion === 'vf' ? 'vostfr' : 'vf', season, tType, 20000));
-          candidatePromises.push(attemptFetch(tId, currentVersion, `saison${season}`, tType, 20000));
-          candidatePromises.push(attemptFetch(tId, currentVersion === 'vf' ? 'vostfr' : 'vf', `saison${season}`, tType, 20000));
+    for (const cfg of candidateConfigs) {
+      if (!cfg.id) continue;
+      try {
+        const res = await attemptFetch(cfg.id, cfg.version, cfg.season, type, 8000);
+        if (res && res.success && (res.streamUrl || res.embedUrl)) {
+          data = res;
+          break; // Succès ! Arrêt immédiat de la recherche
         }
-        candidatePromises.push(attemptFetch(tId, currentVersion, undefined, tType, 20000));
-        candidatePromises.push(attemptFetch(tId, currentVersion === 'vf' ? 'vostfr' : 'vf', undefined, tType, 20000));
-      });
-    });
-
-    try {
-      data = await Promise.any(candidatePromises);
-    } catch (eFast) {}
+      } catch (eSeq) {}
+    }
 
     // Fast-path 2 : Recherche de secours via Titre TMDB si nécessaire
     if ((!data || !data.success || (!data.streamUrl && !data.embedUrl)) && (currentAnime?.title || typeof primaryId === 'string')) {
