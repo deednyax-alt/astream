@@ -1640,7 +1640,50 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
       }
     }
 
-    // Fallback Universel Garanti
+    // Détecter si c'est un film non encore sorti au cinéma (ex: Spider-Man Brand New Day 2026)
+    const isNoStreamFound = !data || (!data.streamUrl && (!data.players || data.players.length === 0));
+    const movieYear = parseInt(currentAnime?.year, 10);
+    const movieTitleLower = (currentAnime?.title || '').toLowerCase();
+    const isUnreleasedMovie = type === 'movie' && isNoStreamFound && (movieYear >= 2026 || movieTitleLower.includes('brand new day') || movieTitleLower.includes('2026') || movieTitleLower.includes('2027'));
+
+    if (isUnreleasedMovie) {
+      videoLoader.classList.remove('active');
+      videoPlayer.style.display = 'none';
+      const iframe = $('premium-iframe-player');
+      if (iframe) { iframe.style.display = 'none'; iframe.src = 'about:blank'; }
+
+      const titleText = currentAnime?.title || 'Film';
+      const releaseYear = currentAnime?.year || '2026';
+      playerEpTitle.innerHTML = `<span style="color:var(--accent-cyan)">🎬 Film en Production (Sortie prévue en ${releaseYear})</span>`;
+
+      const wrapper = $('video-container-wrapper');
+      if (wrapper) {
+        let unreleasedBox = $('unreleased-movie-box');
+        if (!unreleasedBox) {
+          unreleasedBox = document.createElement('div');
+          unreleasedBox.id = 'unreleased-movie-box';
+          wrapper.appendChild(unreleasedBox);
+        }
+        unreleasedBox.innerHTML = `
+          <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,9,13,0.96);backdrop-filter:blur(10px);z-index:20;padding:30px;text-align:center;animation:fadeIn 0.3s ease-out">
+            <div style="font-size:3.5rem;color:var(--accent-purple);margin-bottom:14px"><i class="fa-solid fa-film"></i></div>
+            <h3 style="color:#fff;font-size:1.5rem;margin-bottom:10px">🎬 "${titleText}" est en cours de production</h3>
+            <p style="color:var(--text-muted);max-width:540px;margin:0 auto 24px;line-height:1.6;font-size:0.92rem">
+              Ce film Marvel/Cinéma est actuellement <strong>en cours de tournage et de production pour une sortie officielle en ${releaseYear}</strong>. Aucun flux vidéo n'existe encore. Les lecteurs HD 1080p seront ajoutés automatiquement le jour de sa sortie au cinéma !
+            </p>
+            <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(titleText + ' Trailer Bande Annonce FR')}" target="_blank" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;padding:10px 20px;font-size:0.9rem;border-radius:8px">
+              <i class="fa-solid fa-play"></i> Regarder la Bande-Annonce Officielle sur YouTube
+            </a>
+          </div>
+        `;
+      }
+      return;
+    } else {
+      const oldBox = $('unreleased-movie-box');
+      if (oldBox) oldBox.remove();
+    }
+
+    // Fallback Universel Garanti pour les contenus sortis
     if (!data || (!data.streamUrl && !data.embedUrl && (!data.players || data.players.length === 0))) {
       if (primaryId || cleanSlug) {
         const targetId = cleanSlug || primaryId;
@@ -1657,44 +1700,6 @@ async function resolveAndPlay({ id, type, season, episode, isAnime }) {
       } else {
         throw new Error('Résolution temporairement indisponible pour cet épisode.');
       }
-    }
-
-    // Détecter si c'est un film non encore sorti au cinéma
-    const isUnreleasedMovie = type === 'movie' && (!data.streamUrl || data.streamUrl === null) && (!data.players || data.players.length === 0) && (!data.embeds || (!data.embeds.vf && !data.embeds.vostfr)) && (parseInt(currentAnime?.year, 10) >= 2026 || (currentAnime?.title || '').includes('2026') || (data.embedUrl || '').includes('vidsrc.to/embed/movie/'));
-
-    if (isUnreleasedMovie) {
-      videoLoader.classList.remove('active');
-      videoPlayer.style.display = 'none';
-      const iframe = $('premium-iframe-player');
-      if (iframe) { iframe.style.display = 'none'; iframe.src = 'about:blank'; }
-
-      playerEpTitle.innerHTML = `<span style="color:var(--accent-cyan)">🎬 Film en Production (Sortie prévue en ${currentAnime?.year || '2026'})</span>`;
-      
-      const wrapper = $('video-container-wrapper');
-      if (wrapper) {
-        let unreleasedBox = $('unreleased-movie-box');
-        if (!unreleasedBox) {
-          unreleasedBox = document.createElement('div');
-          unreleasedBox.id = 'unreleased-movie-box';
-          wrapper.appendChild(unreleasedBox);
-        }
-        unreleasedBox.innerHTML = `
-          <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,9,13,0.95);backdrop-filter:blur(8px);z-index:20;padding:30px;text-align:center;animation:fadeIn 0.3s ease-out">
-            <div style="font-size:3.2rem;color:var(--accent-purple);margin-bottom:12px"><i class="fa-solid fa-film"></i></div>
-            <h3 style="color:#fff;font-size:1.4rem;margin-bottom:8px">🎬 "${currentAnime?.title || 'Film'}" non encore sorti</h3>
-            <p style="color:var(--text-muted);max-width:520px;margin:0 auto 22px;line-height:1.6;font-size:0.9rem">
-              Ce film est actuellement <strong>en production pour une sortie au cinéma en ${currentAnime?.year || '2026'}</strong>. Aucun flux de streaming n'existe encore. Les lecteurs HD seront ajoutés automatiquement dès sa sortie officielle !
-            </p>
-            <a href="https://www.youtube.com/results?search_query=${encodeURIComponent((currentAnime?.title || 'Spider-Man Brand New Day') + ' Trailer Bande Annonce FR')}" target="_blank" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none">
-              <i class="fa-solid fa-play"></i> Regarder la Bande-Annonce Officielle sur YouTube
-            </a>
-          </div>
-        `;
-      }
-      return;
-    } else {
-      const oldBox = $('unreleased-movie-box');
-      if (oldBox) oldBox.remove();
     }
 
     if (data.version) {
