@@ -1735,7 +1735,11 @@ function buildSourceSelector(data) {
   if (!streamSourceSelect) return;
   streamSourceSelect.innerHTML = '';
 
-  const mainUrl = data.streamUrl || data.embedUrl || (currentAnime?.id ? `https://vidsrc.me/embed/tv?tmdb=${currentAnime.id}&season=1&episode=1` : '');
+  const tmdbId = currentAnime?.id || currentAnime?.tmdbId || data.id || data.tmdbId || '65141';
+  const numericId = (tmdbId && /^\d+$/.test(String(tmdbId).trim())) ? String(tmdbId).trim() : '65141';
+  const defaultEmbed = currentAnime?.type === 'movie' ? `https://vidsrc.net/embed/movie/${numericId}` : `https://vidsrc.net/embed/tv/${numericId}/${data.season || 1}-${data.episode || 1}`;
+
+  const mainUrl = data.streamUrl || data.embedUrl || defaultEmbed;
 
   const opt = document.createElement('option');
   opt.value = '0';
