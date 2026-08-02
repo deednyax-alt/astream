@@ -1902,52 +1902,18 @@ async function playStream(url) {
   window._triedSources.add(url);
 
   let targetUrl = url;
-  if (typeof targetUrl === 'string' && targetUrl.startsWith('http://')) {
-    targetUrl = targetUrl.replace(/^http:\/\//i, 'https://');
-  }
-  const isEmbed = isRealEmbedUrl(url);
+  const isEmbed = isRealEmbedUrl(targetUrl);
 
-  // Essayer de résoudre automatiquement les URLs Embed vers le Lecteur HTML5 Principal
-  if (isEmbed && !url.startsWith('/api/') && !window._resolvedUrls?.has(url)) {
-    if (!window._resolvedUrls) window._resolvedUrls = new Map();
-    try {
-      if (videoLoader) {
-        videoLoader.classList.add('active');
-        const loaderText = videoLoader.querySelector('p');
-        if (loaderText) loaderText.textContent = "Chargement du flux direct dans le Lecteur Principal...";
-      }
-      const res = await fetch(`/api/resolve-embed?url=${encodeURIComponent(url)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.videoUrl) {
-          console.log(`[Embed Resolver] Flux extrait vers le Lecteur Principal : ${data.videoUrl}`);
-          window._resolvedUrls.set(url, data.videoUrl);
-          targetUrl = data.videoUrl;
-        }
-      }
-    } catch(e) {}
-  } else if (window._resolvedUrls?.has(url)) {
-    targetUrl = window._resolvedUrls.get(url);
-  }
-
-  const finalIsEmbed = isRealEmbedUrl(targetUrl);
-
-  if (finalIsEmbed) {
+  if (isEmbed) {
     video.pause();
     video.style.display = 'none';
     if (iframe) {
       iframe.style.display = 'block';
-      if (targetUrl.includes('vidsrc') || targetUrl.includes('vidzy') || targetUrl.includes('ansembed') || targetUrl.includes('sibnet') || targetUrl.includes('sendvid')) {
-        iframe.removeAttribute('sandbox');
-      } else {
-        try {
-          iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
-        } catch(e) {}
-      }
+      // Toujours retirer le sandbox sur les lecteurs d'embed certifiés pour éliminer les avertissements Chrome
+      iframe.removeAttribute('sandbox');
 
       let embedSrc = targetUrl;
-      // Ne passer par embed-proxy QUE pour les URLs spécifiques nécessitant un proxying lourd
-      const requiresProxy = targetUrl.startsWith('http') && !targetUrl.includes('vidsrc') && !targetUrl.includes('smashystream') && !targetUrl.includes('superembed') && !targetUrl.includes('2embed') && !targetUrl.includes('vidmoly') && !targetUrl.includes('sibnet');
+      const requiresProxy = targetUrl.startsWith('http') && !targetUrl.includes('vidsrc') && !targetUrl.includes('smashystream') && !targetUrl.includes('superembed') && !targetUrl.includes('2embed') && !targetUrl.includes('vidmoly') && !targetUrl.includes('sibnet') && !targetUrl.includes('vidzy') && !targetUrl.includes('ansembed') && !targetUrl.includes('sendvid');
 
       if (requiresProxy) {
         embedSrc = `/api/embed-proxy?url=${encodeURIComponent(targetUrl)}`;
