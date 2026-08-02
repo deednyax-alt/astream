@@ -603,7 +603,7 @@ app.get('/api/proxy', async (req, res) => {
 
   try {
     const targetObj = new URL(videoUrl);
-    if (targetObj.host.includes('deadcow-streaming.lol')) {
+    if (targetObj.host.includes('deadcow-streaming.lol') || videoUrl.includes('media-proxy') || videoUrl.includes('hls-proxy')) {
       headers['Referer'] = 'https://deadcow-streaming.lol/';
       headers['Origin']  = 'https://deadcow-streaming.lol';
       headers['X-API-Key'] = DEADCOW_KEY;
