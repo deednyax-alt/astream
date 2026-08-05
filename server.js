@@ -607,6 +607,9 @@ app.get('/api/proxy', async (req, res) => {
       headers['Referer'] = 'https://deadcow-streaming.lol/';
       headers['Origin']  = 'https://deadcow-streaming.lol';
       headers['X-API-Key'] = DEADCOW_KEY;
+      if (!videoUrl.includes('key=') && !videoUrl.includes('api_key=')) {
+        videoUrl += (videoUrl.includes('?') ? '&' : '?') + 'key=' + DEADCOW_KEY;
+      }
     } else if (referer) {
       headers['Referer'] = referer;
     } else {
