@@ -1937,11 +1937,10 @@ async function playStream(url) {
 
   if (window.Hls && Hls.isSupported() && isHlsManifest) {
     let streamUrl = url;
-    if (url.includes('deadcow-streaming.lol') || url.includes('citron-edge') || url.includes('media-proxy') || url.includes('hls-proxy')) {
-      streamUrl = url.replace(/^http:\/\//i, 'https://');
-      if (streamUrl.startsWith('/')) streamUrl = `https://deadcow-streaming.lol${streamUrl}`;
-    } else if (!url.startsWith('/api/proxy') && !url.startsWith(window.location.origin + '/api/proxy')) {
-      streamUrl = `/api/proxy?url=${encodeURIComponent(url)}&referer=${encodeURIComponent('https://deadcow-streaming.lol/')}`;
+    if (!url.startsWith('/api/proxy') && !url.startsWith(window.location.origin + '/api/proxy')) {
+      let realTarget = url;
+      if (realTarget.startsWith('/')) realTarget = `https://deadcow-streaming.lol${realTarget}`;
+      streamUrl = `/api/proxy?url=${encodeURIComponent(realTarget)}&referer=${encodeURIComponent('https://deadcow-streaming.lol/')}`;
     }
 
     hlsInstance = new Hls({
@@ -1949,7 +1948,7 @@ async function playStream(url) {
       lowLatencyMode: true,
       backBufferLength: 90,
       xhrSetup: function(xhr, xhrUrl) {
-        if (xhrUrl.includes('deadcow-streaming.lol') || xhrUrl.includes('citron-edge') || xhrUrl.includes('media-proxy') || xhrUrl.includes('hls-proxy') || xhrUrl.includes('/api/proxy?')) {
+        if (xhrUrl.startsWith('/api/proxy') || xhrUrl.startsWith(window.location.origin + '/api/proxy')) {
           return;
         }
 
